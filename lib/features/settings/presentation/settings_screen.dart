@@ -171,6 +171,44 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  Widget _accentSwatch({
+    required String key,
+    required String label,
+    required Color? color,
+    required bool selected,
+  }) {
+    final theme = Theme.of(context);
+    return Tooltip(
+      message: label,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(26),
+        onTap: () => _controller.setAccentColor(key),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: color ?? theme.colorScheme.surfaceContainerHighest,
+            border: Border.all(
+              color: selected
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.outlineVariant,
+              width: selected ? 3 : 1,
+            ),
+          ),
+          child: color == null
+              ? Icon(
+                  Icons.auto_awesome,
+                  size: 20,
+                  color: theme.colorScheme.primary,
+                )
+              : null,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -232,13 +270,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ListTile(
                 leading: const Icon(Icons.auto_awesome_outlined),
                 title: Text(
-                  settings.selectedModelId ?? l10n.errNoModel,
+                  settings.selectedModelId ?? l10n.modelNotSelected,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                subtitle: Text(
-                  '${l10n.currentModel}: ${provider?.name ?? l10n.errNoProvider}',
-                ),
+                subtitle: Text(provider?.name ?? l10n.errNoProvider),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
@@ -253,48 +289,55 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             context,
             l10n.generateSection,
             <Widget>[
-              TextField(
-                controller: _maxTokensController,
-                keyboardType: TextInputType.number,
-                onChanged: _onMaxTokensChanged,
-                decoration: InputDecoration(
-                  labelText: 'max_tokens',
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                child: TextField(
+                  controller: _maxTokensController,
+                  keyboardType: TextInputType.number,
+                  onChanged: _onMaxTokensChanged,
+                  decoration: InputDecoration(
+                    labelText: l10n.maxTokensLabel,
+                    helperText: l10n.maxTokensHint,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                 ),
               ),
-              TextField(
-                controller: _timeoutController,
-                keyboardType: TextInputType.number,
-                onChanged: _onTimeoutChanged,
-                decoration: InputDecoration(
-                  labelText: l10n.timeoutLabel,
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+                child: TextField(
+                  controller: _timeoutController,
+                  keyboardType: TextInputType.number,
+                  onChanged: _onTimeoutChanged,
+                  decoration: InputDecoration(
+                    labelText: l10n.timeoutLabel,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                 ),
               ),
-              TextField(
-                controller: _systemPromptController,
-                minLines: 2,
-                maxLines: 6,
-                onChanged: (String value) => _controller.setSystemPrompt(value),
-                decoration: InputDecoration(
-                  labelText: l10n.systemPromptLabel,
-                  helperText: l10n.systemPromptHint,
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+                child: TextField(
+                  controller: _systemPromptController,
+                  minLines: 2,
+                  maxLines: 6,
+                  onChanged: (String value) =>
+                      _controller.setSystemPrompt(value),
+                  decoration: InputDecoration(
+                    labelText: l10n.systemPromptLabel,
+                    helperText: l10n.systemPromptHint,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
             ],
           ),
           _section(
@@ -333,31 +376,35 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 onChanged: (bool value) =>
                     _controller.setPromptCaching(value),
               ),
-              TextField(
-                controller: _contextLimitController,
-                keyboardType: TextInputType.number,
-                onChanged: _onContextLimitChanged,
-                decoration: InputDecoration(
-                  labelText: l10n.contextLimitLabel,
-                  helperText: l10n.contextLimitHint,
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                child: TextField(
+                  controller: _contextLimitController,
+                  keyboardType: TextInputType.number,
+                  onChanged: _onContextLimitChanged,
+                  decoration: InputDecoration(
+                    labelText: l10n.contextLimitLabel,
+                    helperText: l10n.contextLimitHint,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                 ),
               ),
-              TextField(
-                controller: _historyDepthController,
-                keyboardType: TextInputType.number,
-                onChanged: _onHistoryDepthChanged,
-                decoration: InputDecoration(
-                  labelText: l10n.historyDepthLabel,
-                  helperText: l10n.historyDepthHint,
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+                child: TextField(
+                  controller: _historyDepthController,
+                  keyboardType: TextInputType.number,
+                  onChanged: _onHistoryDepthChanged,
+                  decoration: InputDecoration(
+                    labelText: l10n.historyDepthLabel,
+                    helperText: l10n.historyDepthHint,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                 ),
               ),
@@ -420,7 +467,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
@@ -430,32 +477,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         color: theme.colorScheme.primary,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
                     Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+                      spacing: 12,
+                      runSpacing: 12,
                       children: <Widget>[
-                        ChoiceChip(
-                          label: Text(l10n.themeSystem),
+                        _accentSwatch(
+                          key: 'system',
+                          label: l10n.themeSystem,
+                          color: null,
                           selected: settings.accentColor == 'system',
-                          onSelected: (bool selected) =>
-                              _controller.setAccentColor('system'),
                         ),
                         for (final MapEntry<String, Color> entry
                             in kAccentColors.entries)
-                          ChoiceChip(
-                            avatar: Container(
-                              width: 16,
-                              height: 16,
-                              decoration: BoxDecoration(
-                                color: entry.value,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            label: Text(_accentLabel(l10n, entry.key)),
+                          _accentSwatch(
+                            key: entry.key,
+                            label: _accentLabel(l10n, entry.key),
+                            color: entry.value,
                             selected: settings.accentColor == entry.key,
-                            onSelected: (bool selected) =>
-                                _controller.setAccentColor(entry.key),
                           ),
                       ],
                     ),

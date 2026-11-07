@@ -179,9 +179,9 @@
   "contextDetails": "Статистика контекста",
   "statUsed": "Занятый контекст",
   "statFree": "Свободный",
-  "statInput": "input",
-  "statOutput": "output",
-  "statThinking": "thinking",
+  "statInput": "Ввод",
+  "statOutput": "Вывод",
+  "statThinking": "Размышления",
   "reasoningOff": "Не отправлять",
   "errNoProvider": "Сначала добавьте провайдера.",
   "addProvider": "Добавить провайдера",
@@ -191,5 +191,12 @@
   "editProvider": "Изменить",
   "noProvidersYet": "Провайдеров пока нет. Нажмите +, чтобы добавить первый (название, эндпоинт, API-ключ).",
   "promptCachingLabel": "Кэширование промптов",
-  "promptCachingSubtitle": "Anthropic: явные брейкпоинты кэша. OpenAI-совместимые и Gemini кэшируют автоматически при одинаковом префиксе."
+  "promptCachingSubtitle": "Anthropic: явные брейкпоинты кэша. OpenAI-совместимые и Gemini кэшируют автоматически при одинаковом префиксе.",
+  "maxTokensLabel": "Максимум токенов",
+  "maxTokensHint": "max_tokens",
+  "modelNotSelected": "Модель не выбрана",
+  "closeButton": "Закрыть",
+  "suggest1": "Напиши код на Python",
+  "suggest2": "Переведи текст",
+  "suggest3": "Придумай идею для поста"
 }

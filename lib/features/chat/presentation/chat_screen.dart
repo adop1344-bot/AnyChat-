@@ -262,12 +262,58 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         Expanded(
           child: messages.isEmpty
               ? Center(
-                  child: Text(
-                    l10n.startWith,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Container(
+                            width: 72,
+                            height: 72,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest,
+                            ),
+                            child: Icon(
+                              Icons.auto_awesome_outlined,
+                              size: 32,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          Text(
+                            l10n.startWith,
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineMedium
+                                ?.copyWith(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 24),
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: <Widget>[
+                              for (final String suggestion in <String>[
+                                l10n.suggest1,
+                                l10n.suggest2,
+                                l10n.suggest3,
+                              ])
+                                ActionChip(
+                                  label: Text(suggestion),
+                                  onPressed: () => ref
+                                      .read(chatSessionProvider.notifier)
+                                      .send(widget.chatId, suggestion),
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 )
               : ListView.builder(
@@ -366,16 +412,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              _statRow(dl.statUsed, formatTokenCount(used)),
+              _statRow(
+                dl.statUsed,
+                approximate
+                    ? '~${formatTokenCount(used)}'
+                    : formatTokenCount(used),
+              ),
               _statRow(dl.statFree, formatTokenCount(free)),
-              if (approximate)
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    '≈ ${dl.approximateLabel}',
-                    style: Theme.of(dialogContext).textTheme.bodySmall,
-                  ),
-                ),
               const Divider(height: 16),
               _statRow(dl.statInput, formatTokenCount(chat.usageInput)),
               _statRow(dl.statOutput, formatTokenCount(chat.usageOutput)),
@@ -385,7 +428,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           actions: <Widget>[
             FilledButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(dl.cancel),
+              child: Text(dl.closeButton),
             ),
           ],
         );

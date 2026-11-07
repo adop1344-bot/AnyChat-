@@ -191,5 +191,12 @@
   "editProvider": "Edit",
   "noProvidersYet": "No providers yet. Tap + to add your first one (name, endpoint, API key).",
   "promptCachingLabel": "Prompt caching",
-  "promptCachingSubtitle": "Anthropic: explicit cache breakpoints. OpenAI-compatible and Gemini providers cache automatically when the prefix is stable."
+  "promptCachingSubtitle": "Anthropic: explicit cache breakpoints. OpenAI-compatible and Gemini providers cache automatically when the prefix is stable.",
+  "maxTokensLabel": "Max tokens",
+  "maxTokensHint": "max_tokens",
+  "modelNotSelected": "No model selected",
+  "closeButton": "Close",
+  "suggest1": "Write Python code",
+  "suggest2": "Translate text",
+  "suggest3": "Brainstorm post ideas"
 }

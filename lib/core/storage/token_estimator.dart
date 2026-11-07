@@ -24,10 +24,12 @@ int estimateTokens(String text) {
 /// Compact token display: `847`, `12.4K`, `1.05M`.
 String formatTokenCount(int count) {
   if (count >= 1000000) {
-    return '${(count / 1000000).toStringAsFixed(2)}M';
+    final m = count / 1000000;
+    return '${m == m.roundToDouble() ? m.toInt() : m.toStringAsFixed(2)}M';
   }
   if (count >= 1000) {
-    return '${(count / 1000).toStringAsFixed(1)}K';
+    final k = count / 1000;
+    return '${k == k.roundToDouble() ? k.toInt() : k.toStringAsFixed(1)}K';
   }
   return '$count';
 }
