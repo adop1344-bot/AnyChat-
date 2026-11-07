@@ -528,7 +528,7 @@ class CurrentModelChip extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             Icon(
-              Icons.smart_toy_outlined,
+              Icons.auto_awesome_outlined,
               size: 14,
               color: theme.colorScheme.primary,
             ),
