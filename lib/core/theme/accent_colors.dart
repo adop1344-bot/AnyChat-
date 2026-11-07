@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Named accent seeds for the settings picker.
-///
-/// `'system'` is intentionally absent: it means "dynamic color / default".
 const Map<String, Color> kAccentColors = <String, Color>{
   'black': Color(0xFF000000),
   'blue': Color(0xFF1E88E5),
