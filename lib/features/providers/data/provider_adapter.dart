@@ -51,6 +51,7 @@ class ChatParams {
     required this.turns,
     this.reasoningEffort,
     this.maxTokens,
+    this.promptCaching = false,
     this.timeout = const Duration(seconds: 90),
   });
 
@@ -63,6 +64,9 @@ class ChatParams {
   /// `null` = not sent.
   final String? reasoningEffort;
   final int? maxTokens;
+
+  /// Anthropic-style explicit prompt cache breakpoints (server-side).
+  final bool promptCaching;
   final Duration timeout;
 }
 

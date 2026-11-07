@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/theme/accent_colors.dart';
+import 'core/theme/app_theme.dart';
 import 'features/home/main_shell.dart';
 import 'features/settings/app_settings.dart';
 import 'features/settings/state/settings_controller.dart';
@@ -35,21 +36,18 @@ class AnyChatApp extends ConsumerWidget {
     Color? lightSeed,
     Color? darkSeed,
   ) {
-    final accentSeed = kAccentColors[settings.accentColor];
-    final lightScheme = ColorScheme.fromSeed(
-      seedColor: accentSeed ?? lightSeed ?? _seed,
-      brightness: Brightness.light,
-    );
-    final darkScheme = ColorScheme.fromSeed(
-      seedColor: accentSeed ?? darkSeed ?? _seed,
-      brightness: Brightness.dark,
-    );
+    final manualAccent = kAccentColors[settings.accentColor];
+    final fallback = manualAccent ?? _seed;
+    final light =
+        manualAccent?.harmonizeWith(lightSeed ?? fallback) ?? lightSeed ?? fallback;
+    final dark =
+        manualAccent?.harmonizeWith(darkSeed ?? fallback) ?? darkSeed ?? fallback;
     final localeCode = settings.localeCode;
     return MaterialApp(
       title: 'AnyChat',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(useMaterial3: true, colorScheme: lightScheme),
-      darkTheme: ThemeData(useMaterial3: true, colorScheme: darkScheme),
+      theme: AppTheme.light(light),
+      darkTheme: AppTheme.dark(dark),
       themeMode: _themeMode(settings.themeMode),
       locale: localeCode == null ? null : Locale(localeCode),
       supportedLocales: AppLocalizations.supportedLocales,

@@ -13,6 +13,7 @@ class AppSettings {
     this.historyDepth,
     this.accentColor = 'system',
     this.reasoningEffort = '',
+    this.promptCaching = true,
     this.selectedProviderId = '',
     this.selectedModelId,
     this.modelContextWindow,
@@ -38,6 +39,8 @@ class AppSettings {
   final String accentColor;
 
   final String reasoningEffort;
+
+  final bool promptCaching;
   final String selectedProviderId;
   final String? selectedModelId;
   final int? modelContextWindow;
@@ -60,6 +63,7 @@ class AppSettings {
       historyDepth: prefs.getInt('history_depth'),
       accentColor: prefs.getString('accent_color') ?? 'system',
       reasoningEffort: prefs.getString('reasoning_effort') ?? '',
+      promptCaching: prefs.getBool('prompt_caching') ?? true,
       selectedProviderId: prefs.getString('selected_provider') ?? '',
       selectedModelId: prefs.getString('selected_model'),
       modelContextWindow: prefs.getInt('model_context_window'),
@@ -98,6 +102,7 @@ class AppSettings {
     Object? historyDepth = _unspecified,
     String? accentColor,
     String? reasoningEffort,
+    bool? promptCaching,
     String? selectedProviderId,
     Object? selectedModelId = _unspecified,
     Object? modelContextWindow = _unspecified,
@@ -123,6 +128,7 @@ class AppSettings {
           : historyDepth as int?,
       accentColor: accentColor ?? this.accentColor,
       reasoningEffort: reasoningEffort ?? this.reasoningEffort,
+      promptCaching: promptCaching ?? this.promptCaching,
       selectedProviderId: selectedProviderId ?? this.selectedProviderId,
       selectedModelId: identical(selectedModelId, _unspecified)
           ? this.selectedModelId
@@ -167,6 +173,7 @@ class AppSettings {
     await _setOrNull(prefs, 'history_depth', historyDepth);
     await prefs.setString('accent_color', accentColor);
     await prefs.setString('reasoning_effort', reasoningEffort);
+    await prefs.setBool('prompt_caching', promptCaching);
     await _setOrNull(
       prefs,
       'model_reasoning_efforts',

@@ -189,5 +189,7 @@
   "endpointLabel": "Endpoint (Base URL)",
   "deleteProvider": "Delete provider",
   "editProvider": "Edit",
-  "noProvidersYet": "No providers yet. Tap + to add your first one (name, endpoint, API key)."
+  "noProvidersYet": "No providers yet. Tap + to add your first one (name, endpoint, API key).",
+  "promptCachingLabel": "Prompt caching",
+  "promptCachingSubtitle": "Anthropic: explicit cache breakpoints. OpenAI-compatible and Gemini providers cache automatically when the prefix is stable."
 }

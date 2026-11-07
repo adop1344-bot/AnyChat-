@@ -325,6 +325,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     },
                   ),
                 ),
+              SwitchListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                title: Text(l10n.promptCachingLabel),
+                subtitle: Text(l10n.promptCachingSubtitle),
+                value: settings.promptCaching,
+                onChanged: (bool value) =>
+                    _controller.setPromptCaching(value),
+              ),
               TextField(
                 controller: _contextLimitController,
                 keyboardType: TextInputType.number,

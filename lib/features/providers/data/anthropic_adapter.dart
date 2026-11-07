@@ -22,16 +22,30 @@ class AnthropicAdapter extends ProviderAdapter {
     final turns = ProviderAdapter.mergeTurns(params.turns);
     final system = ProviderAdapter.systemPromptOf(turns);
     final messages = turns.where((t) => t.role != 'system').toList();
+    final messageMaps = <Map<String, dynamic>>[
+      for (final turn in messages) _messageFor(turn),
+    ];
+    if (params.promptCaching && messageMaps.length >= 2) {
+      _markCacheBreakpoint(messageMaps[messageMaps.length - 2]);
+    }
     final body = <String, dynamic>{
       'model': params.model,
       'max_tokens': params.maxTokens ?? 4096,
       'stream': true,
-      'messages': <Map<String, dynamic>>[
-        for (final turn in messages) _messageFor(turn),
-      ],
+      'messages': messageMaps,
     };
     if (system != null) {
-      body['system'] = system;
+      if (params.promptCaching) {
+        body['system'] = <Map<String, dynamic>>[
+          <String, dynamic>{
+            'type': 'text',
+            'text': system,
+            'cache_control': <String, String>{'type': 'ephemeral'},
+          },
+        ];
+      } else {
+        body['system'] = system;
+      }
     }
     return ChatRequest(
       url: joinUrl(params.baseUrl, '/messages'),
@@ -73,6 +87,26 @@ class AnthropicAdapter extends ProviderAdapter {
       content.add(<String, dynamic>{'type': 'text', 'text': text});
     }
     return <String, dynamic>{'role': turn.role, 'content': content};
+  }
+
+  static void _markCacheBreakpoint(Map<String, dynamic> message) {
+    final content = message['content'];
+    if (content is List && content.isNotEmpty) {
+      final last = content.last;
+      if (last is Map<String, dynamic>) {
+        last['cache_control'] = <String, String>{'type': 'ephemeral'};
+      }
+      return;
+    }
+    if (content is String) {
+      message['content'] = <Map<String, dynamic>>[
+        <String, dynamic>{
+          'type': 'text',
+          'text': content,
+          'cache_control': <String, String>{'type': 'ephemeral'},
+        },
+      ];
+    }
   }
 
   @override

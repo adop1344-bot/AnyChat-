@@ -271,6 +271,38 @@ void main() {
       expect((messages.first as Map<String, dynamic>)['role'], 'user');
     });
 
+    test('prompt caching marks system and stable prefix', () {
+      final request = adapter.buildChatRequest(
+        ChatParams(
+          apiKey: 'k',
+          baseUrl: 'https://api.anthropic.com/v1',
+          model: 'claude-3-7-sonnet',
+          maxTokens: 100,
+          promptCaching: true,
+          turns: const <ChatTurn>[
+            ChatTurn(role: 'system', content: 'Be brief.'),
+            ChatTurn(role: 'user', content: 'one'),
+            ChatTurn(role: 'assistant', content: 'two'),
+            ChatTurn(role: 'user', content: 'three'),
+          ],
+        ),
+      );
+      final system = request.body['system'] as List<dynamic>;
+      expect(
+        (system.single as Map<String, dynamic>)['cache_control'],
+        <String, String>{'type': 'ephemeral'},
+      );
+      final messages = request.body['messages'] as List<dynamic>;
+      expect(messages, hasLength(3));
+      final stable = messages[1] as Map<String, dynamic>;
+      final blocks = stable['content'] as List<dynamic>;
+      expect(
+        (blocks.single as Map<String, dynamic>)['cache_control'],
+        <String, String>{'type': 'ephemeral'},
+      );
+      expect((messages.last as Map<String, dynamic>)['content'], 'three');
+    });
+
     test('max_tokens defaults to 4096 when unset', () {
       final request = adapter.buildChatRequest(
         _params(

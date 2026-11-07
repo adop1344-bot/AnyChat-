@@ -244,6 +244,7 @@ class ChatSession extends _$ChatSession {
             ? null
             : session.settings.reasoningEffort,
         maxTokens: session.settings.maxTokens,
+        promptCaching: session.settings.promptCaching,
         timeout: Duration(seconds: session.settings.timeoutSeconds),
       );
       final buffer = StringBuffer();
@@ -392,6 +393,7 @@ class ChatSession extends _$ChatSession {
           ? null
           : session.settings.reasoningEffort,
       maxTokens: session.settings.maxTokens,
+      promptCaching: session.settings.promptCaching,
       timeout: Duration(seconds: session.settings.timeoutSeconds),
     );
 
