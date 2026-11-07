@@ -68,9 +68,7 @@ class _InputBarState extends State<InputBar> {
     final l10n = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
     final remove = widget.onRemoveAttachment;
-    final canAttach = !widget.isBusy &&
-        widget.supportedModalities.isNotEmpty &&
-        widget.onAttach != null;
+    final canAttach = !widget.isBusy && widget.onAttach != null;
     final sendReady = _hasText && !widget.isBusy;
 
     final showContext = widget.contextUsed != null &&
@@ -119,7 +117,7 @@ class _InputBarState extends State<InputBar> {
                   prefixIcon: IconButton(
                     icon: const Icon(Icons.add),
                     tooltip:
-                        canAttach ? l10n.attach : l10n.unsupportedForModel,
+                        l10n.attach,
                     onPressed: canAttach ? widget.onAttach : null,
                   ),
                   border: OutlineInputBorder(

@@ -1,9 +1,12 @@
 import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../app_providers.dart';
 import '../../../core/errors/api_error.dart';
 import '../data/provider_adapter.dart';
+import '../../../core/storage/secure_storage.dart';
+import '../data/provider_config_repository.dart';
 import '../domain/custom_provider.dart';
 import '../domain/model_info.dart';
 
@@ -29,10 +32,13 @@ Future<List<ModelInfo>> providerModels(Ref ref, String providerId) async {
   final key = await keyStore.readKey(providerId);
   if (key == null || key.trim().isEmpty) return const <ModelInfo>[];
   try {
-    return await adapterFor(provider.format).fetchModels(
+    final models = await adapterFor(provider.format).fetchModels(
       apiKey: key.trim(),
       baseUrl: provider.baseUrl,
     );
+    final hidden = await _readModelBlacklist(providerId);
+    if (hidden.isEmpty) return models;
+    return models.where((ModelInfo m) => !hidden.contains(m.id)).toList();
   } catch (_) {
     return const <ModelInfo>[];
   }
@@ -86,4 +92,104 @@ Future<ProviderHealth> providerHealth(Ref ref, String providerId) async {
       ms: stopwatch.elapsedMilliseconds,
     );
   }
+}
+
+const String _blacklistPrefix = 'model_blacklist_';
+
+Future<Set<String>> _readModelBlacklist(String providerId) async {
+  final prefs = await SharedPreferences.getInstance();
+  final ids = prefs.getStringList('$_blacklistPrefix$providerId');
+  return ids == null ? <String>{} : ids.toSet();
+}
+
+Future<void> _writeModelBlacklist(String providerId, Set<String> ids) async {
+  final prefs = await SharedPreferences.getInstance();
+  if (ids.isEmpty) {
+    await prefs.remove('$_blacklistPrefix$providerId');
+  } else {
+    await prefs.setStringList('$_blacklistPrefix$providerId', ids.toList());
+  }
+}
+
+@riverpod
+Future<int> hiddenModelCount(Ref ref, String providerId) async {
+  final prefs = await SharedPreferences.getInstance();
+  return prefs.getStringList('$_blacklistPrefix$providerId')?.length ?? 0;
+}
+
+class ModelCheckProgress {
+  const ModelCheckProgress({
+    required this.tested,
+    required this.total,
+    required this.failed,
+  });
+
+  final int tested;
+  final int total;
+  final int failed;
+}
+
+class ModelCheckSummary {
+  const ModelCheckSummary({required this.ok, required this.failed});
+
+  final int ok;
+  final int failed;
+}
+
+Future<ModelCheckSummary> checkAllProviderModels(
+  ProviderConfigRepository repo,
+  SecureKeyStore keyStore,
+  CustomProvider provider, {
+  void Function(ModelCheckProgress progress)? onProgress,
+}) async {
+  final key = (await keyStore.readKey(provider.id))?.trim() ?? '';
+  final models = await adapterFor(provider.format).fetchModels(
+    apiKey: key,
+    baseUrl: provider.baseUrl,
+  );
+  final failedIds = <String>{};
+  var next = 0;
+  var tested = 0;
+  Future<void> worker() async {
+    while (next < models.length) {
+      final model = models[next++];
+      var ok = true;
+      try {
+        final adapter = adapterFor(provider.format);
+        await for (final String delta in adapter
+            .streamChat(ChatParams(
+              apiKey: key,
+              baseUrl: provider.baseUrl,
+              model: model.id,
+              turns: const <ChatTurn>[ChatTurn(role: 'user', content: 'hi')],
+              maxTokens: 1,
+              timeout: const Duration(seconds: 15),
+            ))
+            .timeout(const Duration(seconds: 45))) {
+          if (delta.isNotEmpty) break;
+        }
+      } catch (_) {
+        ok = false;
+      }
+      if (!ok) failedIds.add(model.id);
+      tested++;
+      onProgress?.call(ModelCheckProgress(
+        tested: tested,
+        total: models.length,
+        failed: failedIds.length,
+      ));
+    }
+  }
+
+  final workers = <Future<void>>[];
+  final workerCount = models.length < 3 ? models.length : 3;
+  for (var i = 0; i < workerCount; i++) {
+    workers.add(worker());
+  }
+  await Future.wait(workers);
+  await _writeModelBlacklist(provider.id, failedIds);
+  return ModelCheckSummary(
+    ok: models.length - failedIds.length,
+    failed: failedIds.length,
+  );
 }

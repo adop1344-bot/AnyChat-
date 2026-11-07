@@ -55,6 +55,11 @@ class _ModelsScreenState extends ConsumerState<ModelsScreen> {
     }
     final providerId = provider?.id ?? '';
     final modelsAsync = ref.watch(providerModelsProvider(providerId));
+    final hiddenCount = ref.watch(hiddenModelCountProvider(providerId)).when(
+          data: (int value) => value,
+          loading: () => 0,
+          error: (Object error, StackTrace stack) => 0,
+        );
     final hasKey = ref.watch(hasApiKeyProvider(providerId)).when(
           data: (bool value) => value,
           loading: () => false,
@@ -122,6 +127,26 @@ class _ModelsScreenState extends ConsumerState<ModelsScreen> {
               child: Text(
                 l10n.modelsNoKey,
                 style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+          if (hiddenCount > 0)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Row(
+                children: <Widget>[
+                  Icon(
+                    Icons.visibility_off_outlined,
+                    size: 16,
+                    color: Theme.of(context).colorScheme.tertiary,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      l10n.hiddenModelsCount(hiddenCount),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                ],
               ),
             ),
           Padding(

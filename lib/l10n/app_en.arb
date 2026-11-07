@@ -208,5 +208,18 @@
   "providerHealthMs": "{ms} ms",
   "@providerHealthMs": {"placeholders": {"ms": {"type": "int"}}},
   "providerHealthOffline": "offline",
-  "refreshHealth": "Recheck"
+  "refreshHealth": "Recheck",
+  "attachCamera": "Camera",
+  "attachAlbum": "Album",
+  "attachFile": "File",
+  "grantPhotoAccess": "Allow photo access to see recent images",
+  "openSettings": "Open settings",
+  "imagesMaybeUnsupported": "This model may not support images",
+  "checkAllModels": "Check all models",
+  "checkDone": "{ok} working, {failed} hidden",
+  "@checkDone": {"placeholders": {"ok": {"type": "int"}, "failed": {"type": "int"}}},
+  "checkFailed": "{count} failed",
+  "@checkFailed": {"placeholders": {"count": {"type": "int"}}},
+  "hiddenModelsCount": "{count} models hidden — recheck them in provider settings",
+  "@hiddenModelsCount": {"placeholders": {"count": {"type": "int"}}}
 }

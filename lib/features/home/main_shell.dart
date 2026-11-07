@@ -7,43 +7,14 @@ import '../chat/presentation/widgets/menu_glyph.dart';
 import '../chat/presentation/widgets/chat_composer.dart';
 import '../chat/state/chat_session.dart';
 import '../chat/state/current_chat.dart';
-import '../../core/platform/share_intake.dart';
-import '../chat/state/pending_input.dart';
 import '../chat/domain/models.dart';
 import 'chat_drawer.dart';
 
-class MainShell extends ConsumerStatefulWidget {
+class MainShell extends ConsumerWidget {
   const MainShell({super.key});
 
   @override
-  ConsumerState<MainShell> createState() => _MainShellState();
-}
-
-class _MainShellState extends ConsumerState<MainShell> {
-  @override
-  void initState() {
-    super.initState();
-    ShareIntake.listen(_onSharedText);
-    ShareIntake.consume().then((String? text) {
-      if (text != null && mounted) _onSharedText(text);
-    });
-  }
-
-  void _onSharedText(String text) {
-    final chatId = ref.read(currentChatProvider).when<int?>(
-          data: (int? value) => value,
-          loading: () => null,
-          error: (Object error, StackTrace stack) => null,
-        );
-    if (chatId == null) {
-      final l10n = AppLocalizations.of(context);
-      ref.read(currentChatProvider.notifier).startNewChat(l10n.newChat);
-    }
-    ref.read(pendingInputProvider.notifier).set(text);
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final current = ref.watch(currentChatProvider);
     return current.when<Widget>(

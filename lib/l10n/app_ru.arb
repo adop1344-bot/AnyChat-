@@ -207,5 +207,15 @@
   "pickModelTitle": "Выбор модели",
   "providerHealthMs": "{ms} мс",
   "providerHealthOffline": "офлайн",
-  "refreshHealth": "Проверить снова"
+  "refreshHealth": "Проверить снова",
+  "attachCamera": "Камера",
+  "attachAlbum": "Альбом",
+  "attachFile": "Файл",
+  "grantPhotoAccess": "Разрешите доступ к фото, чтобы видеть недавние снимки",
+  "openSettings": "Открыть настройки",
+  "imagesMaybeUnsupported": "Модель может не поддерживать изображения",
+  "checkAllModels": "Проверить все модели",
+  "checkDone": "Рабочих: {ok}, скрыто: {failed}",
+  "checkFailed": "Битых: {count}",
+  "hiddenModelsCount": "Скрыто моделей: {count} — перепроверьте в настройках провайдера"
 }

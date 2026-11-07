@@ -9,7 +9,7 @@ import '../../../providers/domain/model_info.dart';
 import '../../../settings/app_settings.dart';
 import '../../../settings/state/settings_controller.dart';
 import '../../domain/models.dart';
-import '../../state/pending_input.dart';
+import 'attachment_sheet.dart';
 import 'input_bar.dart';
 
 class ChatComposer extends ConsumerStatefulWidget {
@@ -42,21 +42,6 @@ class _ChatComposerState extends ConsumerState<ChatComposer> {
   final FocusNode _focus = FocusNode();
 
   final List<ChatAttachment> _pending = <ChatAttachment>[];
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _applyPending(ref.read(pendingInputProvider));
-    });
-  }
-
-  void _applyPending(String? text) {
-    if (text == null || text.isEmpty) return;
-    _controller.text = text;
-    _controller.selection = TextSelection.collapsed(offset: text.length);
-    ref.read(pendingInputProvider.notifier).set(null);
-  }
 
   @override
   void dispose() {
@@ -112,9 +97,8 @@ class _ChatComposerState extends ConsumerState<ChatComposer> {
     );
   }
 
-  Future<void> _pickAttachment() async {
+  Future<void> _pickFiles() async {
     final l10n = AppLocalizations.of(context);
-    final supported = _supportedNow();
     final extensions = <String>{};
     if (supported.contains(ModelModality.image)) {
       extensions.addAll(const <String>['jpg', 'jpeg', 'png', 'webp', 'gif']);
@@ -125,7 +109,20 @@ class _ChatComposerState extends ConsumerState<ChatComposer> {
     if (supported.contains(ModelModality.audio)) {
       extensions.addAll(const <String>['mp3', 'wav']);
     }
-    if (extensions.isEmpty) return;
+    if (extensions.isEmpty) {
+      extensions.addAll(const <String>[
+        'jpg',
+        'jpeg',
+        'png',
+        'webp',
+        'gif',
+        'mp3',
+        'wav',
+        'mp4',
+        'mov',
+        'webm',
+      ]);
+    }
 
     List<PlatformFile> files;
     try {
@@ -156,17 +153,6 @@ class _ChatComposerState extends ConsumerState<ChatComposer> {
     if (!mounted) return;
     final mime = _mimeForExtension((file.extension ?? '').toLowerCase());
     if (mime == null) return;
-    final kind = mime.split('/').first;
-    final ModelModality? modality = switch (kind) {
-      'image' => ModelModality.image,
-      'video' => ModelModality.video,
-      'audio' => ModelModality.audio,
-      _ => null,
-    };
-    if (modality == null || !supported.contains(modality)) {
-      _snack(l10n.unsupportedForModel);
-      return;
-    }
     setState(() {
       _pending.add(
         ChatAttachment.fromBytes(
@@ -176,6 +162,20 @@ class _ChatComposerState extends ConsumerState<ChatComposer> {
         ),
       );
     });
+  }
+
+  Future<void> _openAttachSheet() async {
+    final supported = _supportedNow();
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (BuildContext sheetContext) => AttachmentSheet(
+        onAttach: (ChatAttachment attachment) =>
+            setState(() => _pending.add(attachment)),
+        onPickFiles: _pickFiles,
+        warnUnsupported: !supported.contains(ModelModality.image),
+      ),
+    );
   }
 
   void _removePending(int index) {
@@ -201,9 +201,6 @@ class _ChatComposerState extends ConsumerState<ChatComposer> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<String?>(pendingInputProvider, (String? previous, String? next) {
-      _applyPending(next);
-    });
     final settings = ref.watch(settingsControllerProvider).when(
           data: (AppSettings value) => value,
           loading: () => const AppSettings(),
@@ -217,7 +214,7 @@ class _ChatComposerState extends ConsumerState<ChatComposer> {
       onStop: widget.onStop,
       attachments: _pending,
       supportedModalities: _supportedFor(settings),
-      onAttach: _pickAttachment,
+      onAttach: _openAttachSheet,
       onRemoveAttachment: _removePending,
       contextUsed: widget.contextUsed,
       contextLimit: widget.contextLimit,

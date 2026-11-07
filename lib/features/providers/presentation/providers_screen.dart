@@ -447,6 +447,10 @@ class _ProviderEditorState extends ConsumerState<_ProviderEditor> {
                       : null,
                 ),
               ),
+              if (isEdit) ...<Widget>[
+                const SizedBox(height: 16),
+                _ModelCheckSection(provider: widget.existing!),
+              ],
             ],
           ),
         ),
@@ -507,6 +511,116 @@ class _HealthBadge extends ConsumerWidget {
         ),
         const SizedBox(width: 6),
         Text(label, style: Theme.of(context).textTheme.bodySmall),
+      ],
+    );
+  }
+}
+
+class _ModelCheckSection extends ConsumerStatefulWidget {
+  const _ModelCheckSection({required this.provider});
+
+  final CustomProvider provider;
+
+  @override
+  ConsumerState<_ModelCheckSection> createState() =>
+      _ModelCheckSectionState();
+}
+
+class _ModelCheckSectionState extends ConsumerState<_ModelCheckSection> {
+  bool _running = false;
+  ModelCheckProgress? _progress;
+  String? _summary;
+  String? _error;
+
+  Future<void> _run() async {
+    final l10n = AppLocalizations.of(context);
+    setState(() {
+      _running = true;
+      _progress = null;
+      _summary = null;
+      _error = null;
+    });
+    try {
+      final summary = await checkAllProviderModels(
+        ref.read(providerConfigRepositoryProvider),
+        ref.read(keyStoreProvider),
+        widget.provider,
+        onProgress: (ModelCheckProgress progress) {
+          if (mounted) setState(() => _progress = progress);
+        },
+      );
+      ref.invalidate(providerModelsProvider(widget.provider.id));
+      ref.invalidate(hiddenModelCountProvider(widget.provider.id));
+      if (!mounted) return;
+      setState(() {
+        _running = false;
+        _summary = l10n.checkDone(summary.ok, summary.failed);
+      });
+    } catch (Object error) {
+      if (!mounted) return;
+      setState(() {
+        _running = false;
+        _error = l10n.errUnknown('$error');
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    final progress = _progress;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: _running ? null : _run,
+            icon: _running
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.checklist),
+            label: Text(l10n.checkAllModels),
+          ),
+        ),
+        if (_running && progress != null) ...<Widget>[
+          const SizedBox(height: 8),
+          LinearProgressIndicator(
+            value: progress.total == 0
+                ? null
+                : progress.tested / progress.total,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${progress.tested}/${progress.total} · ${l10n.checkFailed(progress.failed)}',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+        if (_summary != null) ...<Widget>[
+          const SizedBox(height: 6),
+          Text(
+            _summary!,
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.apply(color: scheme.primary),
+          ),
+        ],
+        if (_error != null) ...<Widget>[
+          const SizedBox(height: 6),
+          Text(
+            _error!,
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.apply(color: scheme.error),
+          ),
+        ],
       ],
     );
   }
