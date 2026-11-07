@@ -52,7 +52,13 @@ class AnthropicAdapter extends ProviderAdapter {
       content.add(<String, dynamic>{'type': 'text', 'text': turn.content});
     }
     for (final attachment in turn.attachments) {
-      if (!attachment.isImage) continue; // images (and PDFs) only
+      if (!attachment.isImage) {
+        content.add(<String, dynamic>{
+          'type': 'text',
+          'text': '[attachment: ${attachment.name}]',
+        });
+        continue;
+      }
       content.add(<String, dynamic>{
         'type': 'image',
         'source': <String, dynamic>{
@@ -63,7 +69,8 @@ class AnthropicAdapter extends ProviderAdapter {
       });
     }
     if (content.isEmpty) {
-      content.add(<String, dynamic>{'type': 'text', 'text': turn.content});
+      final text = turn.content.isEmpty ? '(empty)' : turn.content;
+      content.add(<String, dynamic>{'type': 'text', 'text': text});
     }
     return <String, dynamic>{'role': turn.role, 'content': content};
   }

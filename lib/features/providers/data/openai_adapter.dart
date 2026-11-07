@@ -22,7 +22,11 @@ class OpenAIAdapter extends ProviderAdapter {
         'stream': true,
         if (params.reasoningEffort != null)
           'reasoning_effort': params.reasoningEffort,
-        if (params.maxTokens != null) 'max_tokens': params.maxTokens,
+        if (params.maxTokens != null)
+          if (isReasoningModel(params.model))
+            'max_completion_tokens': params.maxTokens
+          else
+            'max_tokens': params.maxTokens,
       },
     );
   }
@@ -225,8 +229,14 @@ class OpenAIAdapter extends ProviderAdapter {
       final first = choices[0];
       if (first is Map) {
         final delta = first['delta'];
-        if (delta is Map && delta['content'] is String) {
-          return delta['content'] as String;
+        if (delta is Map) {
+          if (delta['content'] is String) {
+            return delta['content'] as String;
+          }
+          final reasoning = delta['reasoning_content'] ?? delta['reasoning'];
+          if (reasoning is String) {
+            return reasoning;
+          }
         }
         final legacy = first['text'];
         if (legacy is String) return legacy;
