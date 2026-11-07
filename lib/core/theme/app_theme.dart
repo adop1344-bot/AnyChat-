@@ -1,4 +1,3 @@
-import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 
 class AppTheme {
@@ -13,7 +12,7 @@ class AppTheme {
     final scheme = ColorScheme.fromSeed(
       seedColor: seedColor,
       brightness: brightness,
-    ).harmonized();
+    );
     final isDark = brightness == Brightness.dark;
 
     return ThemeData(
@@ -42,7 +41,7 @@ class AppTheme {
         ),
       ),
       dialogTheme: DialogThemeData(
-        color: scheme.surfaceContainerHigh,
+        backgroundColor: scheme.surfaceContainerHigh,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       ),

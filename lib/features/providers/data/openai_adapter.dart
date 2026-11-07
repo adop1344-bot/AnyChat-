@@ -33,7 +33,7 @@ class OpenAIAdapter extends ProviderAdapter {
 
   static Map<String, dynamic> _messageFor(ChatTurn turn) {
     if (turn.attachments.isEmpty) {
-      return <String, String>{'role': turn.role, 'content': turn.content};
+      return <String, dynamic>{'role': turn.role, 'content': turn.content};
     }
     final content = <Map<String, dynamic>>[];
     if (turn.content.isNotEmpty) {
