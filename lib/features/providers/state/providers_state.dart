@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -32,13 +34,10 @@ Future<List<ModelInfo>> providerModels(Ref ref, String providerId) async {
   final key = await keyStore.readKey(providerId);
   if (key == null || key.trim().isEmpty) return const <ModelInfo>[];
   try {
-    final models = await adapterFor(provider.format).fetchModels(
+    return adapterFor(provider.format).fetchModels(
       apiKey: key.trim(),
       baseUrl: provider.baseUrl,
     );
-    final hidden = await _readModelBlacklist(providerId);
-    if (hidden.isEmpty) return models;
-    return models.where((ModelInfo m) => !hidden.contains(m.id)).toList();
   } catch (_) {
     return const <ModelInfo>[];
   }
@@ -94,27 +93,33 @@ Future<ProviderHealth> providerHealth(Ref ref, String providerId) async {
   }
 }
 
-const String _blacklistPrefix = 'model_blacklist_';
+const String _checkPrefix = 'model_check_';
 
-Future<Set<String>> _readModelBlacklist(String providerId) async {
+Future<Map<String, bool>> _readModelStatuses(String providerId) async {
   final prefs = await SharedPreferences.getInstance();
-  final ids = prefs.getStringList('$_blacklistPrefix$providerId');
-  return ids == null ? <String>{} : ids.toSet();
+  final raw = prefs.getString('$_checkPrefix$providerId');
+  if (raw == null || raw.isEmpty) return <String, bool>{};
+  try {
+    final Object? decoded = jsonDecode(raw);
+    if (decoded is Map<String, dynamic>) {
+      return decoded.map((String k, Object? v) => MapEntry(k, v == true));
+    }
+  } catch (_) {}
+  return <String, bool>{};
 }
 
-Future<void> _writeModelBlacklist(String providerId, Set<String> ids) async {
+Future<void> _writeModelStatuses(
+  String providerId,
+  Map<String, bool> statuses,
+) async {
   final prefs = await SharedPreferences.getInstance();
-  if (ids.isEmpty) {
-    await prefs.remove('$_blacklistPrefix$providerId');
-  } else {
-    await prefs.setStringList('$_blacklistPrefix$providerId', ids.toList());
-  }
+  await prefs.setString('$_checkPrefix$providerId', jsonEncode(statuses));
+  await prefs.remove('model_blacklist_$providerId');
 }
 
 @riverpod
-Future<int> hiddenModelCount(Ref ref, String providerId) async {
-  final prefs = await SharedPreferences.getInstance();
-  return prefs.getStringList('$_blacklistPrefix$providerId')?.length ?? 0;
+Future<Map<String, bool>> modelCheckStatuses(Ref ref, String providerId) {
+  return _readModelStatuses(providerId);
 }
 
 class ModelCheckProgress {
@@ -122,11 +127,13 @@ class ModelCheckProgress {
     required this.tested,
     required this.total,
     required this.failed,
+    required this.statuses,
   });
 
   final int tested;
   final int total;
   final int failed;
+  final Map<String, bool> statuses;
 }
 
 class ModelCheckSummary {
@@ -147,7 +154,7 @@ Future<ModelCheckSummary> checkAllProviderModels(
     apiKey: key,
     baseUrl: provider.baseUrl,
   );
-  final failedIds = <String>{};
+  final statuses = <String, bool>{};
   var next = 0;
   var tested = 0;
   Future<void> worker() async {
@@ -171,12 +178,13 @@ Future<ModelCheckSummary> checkAllProviderModels(
       } catch (_) {
         ok = false;
       }
-      if (!ok) failedIds.add(model.id);
+      statuses[model.id] = ok;
       tested++;
       onProgress?.call(ModelCheckProgress(
         tested: tested,
         total: models.length,
-        failed: failedIds.length,
+        failed: statuses.values.where((bool v) => !v).length,
+        statuses: Map<String, bool>.from(statuses),
       ));
     }
   }
@@ -187,9 +195,10 @@ Future<ModelCheckSummary> checkAllProviderModels(
     workers.add(worker());
   }
   await Future.wait(workers);
-  await _writeModelBlacklist(provider.id, failedIds);
+  await _writeModelStatuses(provider.id, statuses);
+  final failed = statuses.values.where((bool v) => !v).length;
   return ModelCheckSummary(
-    ok: models.length - failedIds.length,
-    failed: failedIds.length,
+    ok: models.length - failed,
+    failed: failed,
   );
 }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app_providers.dart';
+
 import '../../../core/storage/token_estimator.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../providers/domain/model_info.dart';
@@ -20,11 +22,53 @@ class ModelsScreen extends ConsumerStatefulWidget {
 class _ModelsScreenState extends ConsumerState<ModelsScreen> {
   final TextEditingController _customController = TextEditingController();
   String _query = '';
+  bool _checking = false;
+  Map<String, bool> _liveStatuses = <String, bool>{};
+  ModelCheckProgress? _checkProgress;
+  String? _checkSummary;
+  String? _checkError;
 
   @override
   void dispose() {
     _customController.dispose();
     super.dispose();
+  }
+
+  Future<void> _runCheck(CustomProvider provider) async {
+    final l10n = AppLocalizations.of(context);
+    setState(() {
+      _checking = true;
+      _liveStatuses = <String, bool>{};
+      _checkProgress = null;
+      _checkSummary = null;
+      _checkError = null;
+    });
+    try {
+      final summary = await checkAllProviderModels(
+        ref.read(providerConfigRepositoryProvider),
+        ref.read(keyStoreProvider),
+        provider,
+        onProgress: (ModelCheckProgress progress) {
+          if (!mounted) return;
+          setState(() {
+            _checkProgress = progress;
+            _liveStatuses = progress.statuses;
+          });
+        },
+      );
+      ref.invalidate(modelCheckStatusesProvider(provider.id));
+      if (!mounted) return;
+      setState(() {
+        _checking = false;
+        _checkSummary = l10n.checkDone(summary.ok, summary.failed);
+      });
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _checking = false;
+        _checkError = l10n.errUnknown('$error');
+      });
+    }
   }
 
   void _applyCustomModel(String providerId) {
@@ -55,10 +99,10 @@ class _ModelsScreenState extends ConsumerState<ModelsScreen> {
     }
     final providerId = provider?.id ?? '';
     final modelsAsync = ref.watch(providerModelsProvider(providerId));
-    final hiddenCount = ref.watch(hiddenModelCountProvider(providerId)).when(
-          data: (int value) => value,
-          loading: () => 0,
-          error: (Object error, StackTrace stack) => 0,
+    final checkStatuses = ref.watch(modelCheckStatusesProvider(providerId)).when(
+          data: (Map<String, bool> value) => value,
+          loading: () => const <String, bool>{},
+          error: (Object error, StackTrace stack) => const <String, bool>{},
         );
     final hasKey = ref.watch(hasApiKeyProvider(providerId)).when(
           data: (bool value) => value,
@@ -100,8 +144,14 @@ class _ModelsScreenState extends ConsumerState<ModelsScreen> {
         title: Text(l10n.modelsTitle),
         actions: <Widget>[
           IconButton(
-            onPressed: () =>
-                ref.invalidate(providerModelsProvider(providerId)),
+            tooltip: l10n.checkAllModels,
+            onPressed: _checking ? null : () => _runCheck(provider!),
+            icon: const Icon(Icons.fact_check_outlined),
+          ),
+          IconButton(
+            onPressed: _checking
+                ? null
+                : () => ref.invalidate(providerModelsProvider(providerId)),
             icon: const Icon(Icons.refresh),
           ),
         ],
@@ -129,24 +179,46 @@ class _ModelsScreenState extends ConsumerState<ModelsScreen> {
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ),
-          if (hiddenCount > 0)
+          if (_checking && _checkProgress != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Icon(
-                    Icons.visibility_off_outlined,
-                    size: 16,
-                    color: Theme.of(context).colorScheme.tertiary,
+                  LinearProgressIndicator(
+                    value: _checkProgress!.total == 0
+                        ? null
+                        : _checkProgress!.tested / _checkProgress!.total,
                   ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      l10n.hiddenModelsCount(hiddenCount),
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${_checkProgress!.tested}/${_checkProgress!.total} · '
+                    '${l10n.checkFailed(_checkProgress!.failed)}',
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
+              ),
+            ),
+          if (_checkSummary != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Text(
+                _checkSummary!,
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.apply(color: Theme.of(context).colorScheme.primary),
+              ),
+            ),
+          if (_checkError != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Text(
+                _checkError!,
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.apply(color: Theme.of(context).colorScheme.error),
               ),
             ),
           Padding(
@@ -176,6 +248,9 @@ class _ModelsScreenState extends ConsumerState<ModelsScreen> {
               child: Center(child: Text(l10n.errUnknown('$error'))),
             ),
             data: (List<ModelInfo> models) {
+              final statuses = <String, bool>{}
+                ..addAll(checkStatuses)
+                ..addAll(_liveStatuses);
               final query = _query;
               final filtered = models.where((ModelInfo model) {
                 if (query.isEmpty) return true;
@@ -196,6 +271,7 @@ class _ModelsScreenState extends ConsumerState<ModelsScreen> {
                       model: model,
                       providerId: providerId,
                       selected: model.id == selectedModelId,
+                      checkStatus: statuses[model.id],
                     ),
 
                 ],
@@ -266,11 +342,13 @@ class _ModelTile extends ConsumerWidget {
     required this.model,
     required this.providerId,
     required this.selected,
+    this.checkStatus,
   });
 
   final ModelInfo model;
   final String providerId;
   final bool selected;
+  final bool? checkStatus;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -279,7 +357,15 @@ class _ModelTile extends ConsumerWidget {
     final meta = _metaLine(model);
     final hasIcons = isReasoningModel(model.id) || model.modalities.isNotEmpty;
 
-    return ListTile(
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      decoration: checkStatus == false
+          ? BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFE53935)),
+            )
+          : null,
+      child: ListTile(
       title: Text(model.name, maxLines: 2, overflow: TextOverflow.ellipsis),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -329,7 +415,7 @@ class _ModelTile extends ConsumerWidget {
             ),
         ],
       ),
-      trailing: selected ? Icon(Icons.check_circle, color: scheme.primary) : null,
+      trailing: _statusIcon(scheme),
       onTap: () async {
         await ref.read(settingsControllerProvider.notifier).selectModel(
               providerId: providerId,
@@ -349,6 +435,20 @@ class _ModelTile extends ConsumerWidget {
           ),
         );
       },
+      ),
     );
+  }
+
+  Widget? _statusIcon(ColorScheme scheme) {
+    if (checkStatus == false) {
+      return const Icon(Icons.cancel, color: Color(0xFFE53935));
+    }
+    if (selected) {
+      return Icon(Icons.check_circle, color: scheme.primary);
+    }
+    if (checkStatus == true) {
+      return const Icon(Icons.check_circle, color: Color(0xFF43A047));
+    }
+    return null;
   }
 }
