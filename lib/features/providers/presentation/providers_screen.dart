@@ -31,6 +31,17 @@ class ProvidersScreen extends ConsumerWidget {
         title: Text(l10n.providersTitle),
         actions: <Widget>[
           IconButton(
+            tooltip: l10n.refreshHealth,
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              providersAsync.whenData((List<CustomProvider> providers) {
+                for (final provider in providers) {
+                  ref.invalidate(providerHealthProvider(provider.id));
+                }
+              });
+            },
+          ),
+          IconButton(
             tooltip: l10n.addProvider,
             icon: const Icon(Icons.add),
             onPressed: () => _showEditor(ref, context),
@@ -74,8 +85,14 @@ class ProvidersScreen extends ConsumerWidget {
                       : Icons.radio_button_off,
                 ),
                 title: Text(provider.name),
-                subtitle:
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
                     Text('${provider.baseUrl} · ${provider.format.name}'),
+                    const SizedBox(height: 2),
+                    _HealthBadge(providerId: provider.id),
+                  ],
+                ),
                 selected: selectedId == provider.id,
                 onTap: () => ref
                     .read(settingsControllerProvider.notifier)
@@ -443,6 +460,53 @@ class _ProviderEditorState extends ConsumerState<_ProviderEditor> {
           onPressed: _save,
           child: Text(isEdit ? l10n.save : l10n.saveKey),
         ),
+      ],
+    );
+  }
+}
+
+class _HealthBadge extends ConsumerWidget {
+  const _HealthBadge({required this.providerId});
+
+  final String providerId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final health = ref.watch(providerHealthProvider(providerId));
+    final Color color;
+    final String label;
+    final value = health.value;
+    if (health.hasError || (value != null && value.state == ProviderHealthState.down)) {
+      color = const Color(0xFFE53935);
+      label = l10n.providerHealthOffline;
+    } else if (value == null) {
+      color = Colors.grey;
+      label = '…';
+    } else {
+      switch (value.state) {
+        case ProviderHealthState.ok:
+          color = const Color(0xFF43A047);
+        case ProviderHealthState.reachable:
+          color = const Color(0xFFFB8C00);
+        case ProviderHealthState.down:
+        case ProviderHealthState.unknown:
+          color = Colors.grey;
+      }
+      label = value.state == ProviderHealthState.unknown
+          ? l10n.providerHealthOffline
+          : l10n.providerHealthMs(value.ms);
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+        ),
+        const SizedBox(width: 6),
+        Text(label, style: Theme.of(context).textTheme.bodySmall),
       ],
     );
   }

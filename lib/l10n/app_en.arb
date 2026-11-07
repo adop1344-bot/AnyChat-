@@ -204,5 +204,9 @@
   "allProviders": "All",
   "noModelsProvider": "No models — check the API key",
   "favoriteModel": "Favorite",
-  "pickModelTitle": "Select model"
+  "pickModelTitle": "Select model",
+  "providerHealthMs": "{ms} ms",
+  "@providerHealthMs": {"placeholders": {"ms": {"type": "int"}}},
+  "providerHealthOffline": "offline",
+  "refreshHealth": "Recheck"
 }

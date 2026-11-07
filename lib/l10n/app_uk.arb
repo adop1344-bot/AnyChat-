@@ -204,5 +204,8 @@
   "allProviders": "Усі",
   "noModelsProvider": "Немає моделей — перевірте API-ключ",
   "favoriteModel": "До обраного",
-  "pickModelTitle": "Вибір моделі"
+  "pickModelTitle": "Вибір моделі",
+  "providerHealthMs": "{ms} мс",
+  "providerHealthOffline": "офлайн",
+  "refreshHealth": "Перевірити"
 }

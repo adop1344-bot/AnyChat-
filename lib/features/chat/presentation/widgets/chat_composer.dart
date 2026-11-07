@@ -9,6 +9,7 @@ import '../../../providers/domain/model_info.dart';
 import '../../../settings/app_settings.dart';
 import '../../../settings/state/settings_controller.dart';
 import '../../domain/models.dart';
+import '../../state/pending_input.dart';
 import 'input_bar.dart';
 
 class ChatComposer extends ConsumerStatefulWidget {
@@ -41,6 +42,21 @@ class _ChatComposerState extends ConsumerState<ChatComposer> {
   final FocusNode _focus = FocusNode();
 
   final List<ChatAttachment> _pending = <ChatAttachment>[];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _applyPending(ref.read(pendingInputProvider));
+    });
+  }
+
+  void _applyPending(String? text) {
+    if (text == null || text.isEmpty) return;
+    _controller.text = text;
+    _controller.selection = TextSelection.collapsed(offset: text.length);
+    ref.read(pendingInputProvider.notifier).set(null);
+  }
 
   @override
   void dispose() {
@@ -185,6 +201,9 @@ class _ChatComposerState extends ConsumerState<ChatComposer> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<String?>(pendingInputProvider, (String? previous, String? next) {
+      _applyPending(next);
+    });
     final settings = ref.watch(settingsControllerProvider).when(
           data: (AppSettings value) => value,
           loading: () => const AppSettings(),
