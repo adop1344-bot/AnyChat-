@@ -14,6 +14,7 @@ class AppSettings {
     this.accentColor = 'system',
     this.reasoningEffort = '',
     this.promptCaching = true,
+    this.favoriteModels = const <String>[],
     this.selectedProviderId = '',
     this.selectedModelId,
     this.modelContextWindow,
@@ -41,6 +42,8 @@ class AppSettings {
   final String reasoningEffort;
 
   final bool promptCaching;
+
+  final List<String> favoriteModels;
   final String selectedProviderId;
   final String? selectedModelId;
   final int? modelContextWindow;
@@ -64,6 +67,8 @@ class AppSettings {
       accentColor: prefs.getString('accent_color') ?? 'system',
       reasoningEffort: prefs.getString('reasoning_effort') ?? '',
       promptCaching: prefs.getBool('prompt_caching') ?? true,
+      favoriteModels:
+          prefs.getStringList('favorite_models') ?? const <String>[],
       selectedProviderId: prefs.getString('selected_provider') ?? '',
       selectedModelId: prefs.getString('selected_model'),
       modelContextWindow: prefs.getInt('model_context_window'),
@@ -103,6 +108,7 @@ class AppSettings {
     String? accentColor,
     String? reasoningEffort,
     bool? promptCaching,
+    List<String>? favoriteModels,
     String? selectedProviderId,
     Object? selectedModelId = _unspecified,
     Object? modelContextWindow = _unspecified,
@@ -129,6 +135,7 @@ class AppSettings {
       accentColor: accentColor ?? this.accentColor,
       reasoningEffort: reasoningEffort ?? this.reasoningEffort,
       promptCaching: promptCaching ?? this.promptCaching,
+      favoriteModels: favoriteModels ?? this.favoriteModels,
       selectedProviderId: selectedProviderId ?? this.selectedProviderId,
       selectedModelId: identical(selectedModelId, _unspecified)
           ? this.selectedModelId
@@ -174,6 +181,7 @@ class AppSettings {
     await prefs.setString('accent_color', accentColor);
     await prefs.setString('reasoning_effort', reasoningEffort);
     await prefs.setBool('prompt_caching', promptCaching);
+    await prefs.setStringList('favorite_models', favoriteModels);
     await _setOrNull(
       prefs,
       'model_reasoning_efforts',

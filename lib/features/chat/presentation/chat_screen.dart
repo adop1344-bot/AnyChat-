@@ -15,6 +15,7 @@ import 'widgets/chat_composer.dart';
 import 'widgets/context_circle.dart';
 import 'widgets/menu_glyph.dart';
 import 'widgets/message_bubble.dart';
+import 'widgets/model_picker_sheet.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key, required this.chatId});
@@ -172,6 +173,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       onPressed: () =>
                           Scaffold.of(scaffoldContext).openDrawer(),
                     ),
+                  ),
+                  Positioned(
+                    top: 10,
+                    left: 64,
+                    right: 64,
+                    child: Center(child: CurrentModelChip()),
                   ),
                   Positioned(
                     top: 4,

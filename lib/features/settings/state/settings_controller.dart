@@ -59,6 +59,14 @@ class SettingsController extends _$SettingsController {
   Future<void> setPromptCaching(bool value) =>
       _update((s) => s.copyWith(promptCaching: value));
 
+  Future<void> toggleFavoriteModel(String key) => _update(
+        (s) => s.copyWith(
+          favoriteModels: s.favoriteModels.contains(key)
+              ? (<String>[...s.favoriteModels]..remove(key))
+              : <String>[...s.favoriteModels, key],
+        ),
+      );
+
   Future<void> selectProvider(String providerId) => _update(
         (s) => s
             .copyWith(selectedProviderId: providerId)

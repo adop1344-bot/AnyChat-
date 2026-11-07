@@ -198,5 +198,11 @@
   "closeButton": "Close",
   "suggest1": "Write Python code",
   "suggest2": "Translate text",
-  "suggest3": "Brainstorm post ideas"
+  "suggest3": "Brainstorm post ideas",
+  "searchModelHint": "Search models by name",
+  "badgeChat": "Chat",
+  "allProviders": "All",
+  "noModelsProvider": "No models — check the API key",
+  "favoriteModel": "Favorite",
+  "pickModelTitle": "Select model"
 }

@@ -198,5 +198,11 @@
   "closeButton": "Закрыть",
   "suggest1": "Напиши код на Python",
   "suggest2": "Переведи текст",
-  "suggest3": "Придумай идею для поста"
+  "suggest3": "Придумай идею для поста",
+  "searchModelHint": "Введите название модели для поиска",
+  "badgeChat": "Чат",
+  "allProviders": "Все",
+  "noModelsProvider": "Нет моделей — проверьте API-ключ",
+  "favoriteModel": "В избранное",
+  "pickModelTitle": "Выбор модели"
 }
