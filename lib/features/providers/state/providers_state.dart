@@ -34,10 +34,11 @@ Future<List<ModelInfo>> providerModels(Ref ref, String providerId) async {
   final key = await keyStore.readKey(providerId);
   if (key == null || key.trim().isEmpty) return const <ModelInfo>[];
   try {
-    return adapterFor(provider.format).fetchModels(
+    final models = await adapterFor(provider.format).fetchModels(
       apiKey: key.trim(),
       baseUrl: provider.baseUrl,
     );
+    return models;
   } catch (_) {
     return const <ModelInfo>[];
   }
