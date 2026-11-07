@@ -44,7 +44,7 @@ class AnyChatApp extends ConsumerWidget {
         manualAccent?.harmonizeWith(darkSeed ?? fallback) ?? darkSeed ?? fallback;
     final localeCode = settings.localeCode;
     return MaterialApp(
-      title: 'AnyChat',
+      title: 'AnyChat+',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(light),
       darkTheme: AppTheme.dark(dark),
