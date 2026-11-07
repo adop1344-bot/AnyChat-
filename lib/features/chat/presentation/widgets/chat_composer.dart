@@ -99,30 +99,18 @@ class _ChatComposerState extends ConsumerState<ChatComposer> {
 
   Future<void> _pickFiles() async {
     final l10n = AppLocalizations.of(context);
-    final extensions = <String>{};
-    if (supported.contains(ModelModality.image)) {
-      extensions.addAll(const <String>['jpg', 'jpeg', 'png', 'webp', 'gif']);
-    }
-    if (supported.contains(ModelModality.video)) {
-      extensions.addAll(const <String>['mp4', 'mov', 'webm']);
-    }
-    if (supported.contains(ModelModality.audio)) {
-      extensions.addAll(const <String>['mp3', 'wav']);
-    }
-    if (extensions.isEmpty) {
-      extensions.addAll(const <String>[
-        'jpg',
-        'jpeg',
-        'png',
-        'webp',
-        'gif',
-        'mp3',
-        'wav',
-        'mp4',
-        'mov',
-        'webm',
-      ]);
-    }
+    final extensions = <String>{
+      'jpg',
+      'jpeg',
+      'png',
+      'webp',
+      'gif',
+      'mp4',
+      'mov',
+      'webm',
+      'mp3',
+      'wav',
+    };
 
     List<PlatformFile> files;
     try {

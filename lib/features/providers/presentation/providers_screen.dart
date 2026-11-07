@@ -556,7 +556,7 @@ class _ModelCheckSectionState extends ConsumerState<_ModelCheckSection> {
         _running = false;
         _summary = l10n.checkDone(summary.ok, summary.failed);
       });
-    } catch (Object error) {
+    } on Object catch (error) {
       if (!mounted) return;
       setState(() {
         _running = false;
