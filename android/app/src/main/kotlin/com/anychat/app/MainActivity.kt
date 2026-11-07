@@ -1,4 +1,4 @@
-package com.anychat.app
+package com.anychat.fork
 
 import io.flutter.embedding.android.FlutterActivity
 

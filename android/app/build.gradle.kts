@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.anychat.app"
+    namespace = "com.anychat.fork"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -15,7 +15,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.anychat.app"
+        applicationId = "com.anychat.fork"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
