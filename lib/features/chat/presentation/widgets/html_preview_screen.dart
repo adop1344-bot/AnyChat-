@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
-import '../state/chat_session.dart';
+import '../../state/chat_session.dart';
 import 'code_block.dart';
 
 /// Fullscreen HTML preview of one code block. Sibling CSS / JS blocks of

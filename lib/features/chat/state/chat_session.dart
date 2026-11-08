@@ -545,21 +545,6 @@ class ChatSession extends _$ChatSession {
     }
   }
 
-  Future<void> _recordFailure(
-    MessageRepository repo,
-    int messageId,
-    String content,
-    ApiError error,
-  ) async {
-    await repo.setContent(messageId, content);
-    await repo.setError(
-      messageId,
-      errorType: error.type.name,
-      errorDetails: error.details,
-    );
-    ref.read(debugLogProvider.notifier).add(error);
-    state = ChatSessionState(lastError: error);
-  }
 
   void _setUnknownFailure(Object cause) {
     final error = ApiError(

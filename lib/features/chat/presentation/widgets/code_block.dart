@@ -173,11 +173,13 @@ class CodeBlockCard extends StatefulWidget {
     required this.code,
     required this.language,
     this.snippets = const <CodeSnippet>[],
+    this.messageId,
   });
 
   final String code;
   final String language;
   final List<CodeSnippet> snippets;
+  final int? messageId;
 
   @override
   State<CodeBlockCard> createState() => _CodeBlockCardState();
