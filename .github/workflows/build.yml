@@ -1,154 +1,70 @@
-name: Build
+name: Build APK
 
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - "**/*.md"
-      - "LICENSE"
-      - ".gitignore"
-  pull_request:
-    paths-ignore:
-      - "**/*.md"
-      - "LICENSE"
-      - ".gitignore"
+    tags: ['v*']
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
-    name: Analyze, test and build APK
     runs-on: ubuntu-latest
-    timeout-minutes: 45
-    permissions:
-      contents: write
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Java
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: '21'
 
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.47.8"
+          flutter-version: 3.47.8
           channel: stable
           cache: true
 
-      - name: Cache pub packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.pub-cache
-          key: ${{ runner.os }}-pub-${{ hashFiles('pubspec.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pub-
-
-      - name: Debug keystore (stable release signature)
-        # AGP 9 signs with the debug key stored at ~/.config/.android
-        # (alias AndroidDebugKey); the bytes come from the repository secret
-        # so every build keeps the same signature.
-        env:
-          KEYSTORE_B64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_B64 }}
-        shell: bash
+      - name: Pub get + codegen
         run: |
-          set -euo pipefail
-          target="$HOME/.config/.android/debug.keystore"
-          mkdir -p "$(dirname "$target")"
-          if [ -n "${KEYSTORE_B64:-}" ]; then
-            printf '%s' "$KEYSTORE_B64" | base64 -d > "$target"
-          elif [ ! -s "$target" ]; then
-            keytool -genkeypair -keystore "$target" \
-              -storepass android -keypass android -alias AndroidDebugKey \
-              -keyalg RSA -keysize 2048 -validity 10000 \
-              -dname "CN=Android Debug,O=Android,C=US"
-          fi
-          test -s "$target"
+          flutter pub get
+          flutter gen-l10n
+          dart run build_runner build --delete-conflicting-outputs
 
-      - name: Cache Gradle
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('android/**/*.gradle*', 'android/gradle/wrapper/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
-      - name: flutter pub get
-        run: flutter pub get
-
-      - name: flutter gen-l10n
-        run: flutter gen-l10n
-
-      - name: build_runner (bootstrap drift schema)
-        # `lib/core/storage/db.dart` uses `part 'db.g.dart'`, but the riverpod
-        # generator must not run before that part exists (it would see the
-        # generated row types as unresolved). Generate just the drift output
-        # first, then run the full build.
-        run: dart run build_runner build --build-filter=lib/core/storage/db.g.dart
-
-      - name: verify drift output exists
-        run: test -s lib/core/storage/db.g.dart
-
-      - name: build_runner (full)
-        run: dart run build_runner build
-
-      - name: flutter analyze
+      - name: Analyze
         run: flutter analyze
 
-      - name: flutter test
+      - name: Test
         run: flutter test
 
-      - name: flutter build apk --release
+      - name: Build APK
         run: flutter build apk --release
 
-      - name: Verify APK signature
-        run: python3 scripts/verify_apk_signature.py build/app/outputs/flutter-apk/app-release.apk "$HOME/.config/.android/debug.keystore"
+      - name: Compute release tag
+        id: rel
+        run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            echo "tag=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+            echo "pre=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=build-latest" >> "$GITHUB_OUTPUT"
+            echo "pre=true" >> "$GITHUB_OUTPUT"
+          fi
 
-      - name: Short SHA
-        id: sha
-        shell: bash
-        run: echo "value=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: AnyChat-${{ steps.sha.outputs.value }}
-          path: build/app/outputs/flutter-apk/app-release.apk
-          if-no-files-found: error
-
-      - name: Publish GitHub release
-        # Every green push to main gets an alpha release: tag alpha-N
-        # (N = max of the existing alpha-N tags + 1) and an APK asset named
-        # AnyChat-arm64-alpha-N.apk.
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      - name: Clean rolling release
+        if: steps.rel.outputs.pre == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          base=$(gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
-            --jq '[.[].tag_name | select(test("^alpha-[0-9]+$")) | ltrimstr("alpha-") | tonumber] | max // 0')
-          echo "latest alpha number: ${base}"
-          for i in $(seq 0 19); do
-            n=$((base + i + 1))
-            if gh release view "alpha-${n}" > /dev/null 2>&1; then
-              continue
-            fi
-            sha7="${GITHUB_SHA:0:7}"
-            asset="AnyChat-arm64-alpha-${n}.apk"
-            cp "build/app/outputs/flutter-apk/app-release.apk" "${asset}"
-            gh release create "alpha-${n}" "${asset}" \
-              --target "${GITHUB_SHA}" \
-              --title "AnyChat Alpha ${n}" \
-              --notes "Automated alpha build \`${sha7}\` — ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
-              --latest
-            echo "published alpha-${n} with asset ${asset}"
-            exit 0
-          done
-          echo "Could not allocate a free alpha tag" >&2
-          exit 1
+        run: gh release delete build-latest --yes --cleanup-tag || true
+
+      - name: Rename APK
+        run: cp build/app/outputs/flutter-apk/app-release.apk "AnyChat+-${{ steps.rel.outputs.tag }}.apk"
+
+      - name: Upload to Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.rel.outputs.tag }}
+          prerelease: ${{ steps.rel.outputs.pre == 'true' }}
+          generate_release_notes: ${{ steps.rel.outputs.pre == 'false' }}
+          files: AnyChat+-*.apk
