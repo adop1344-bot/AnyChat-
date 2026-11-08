@@ -217,5 +217,11 @@
   "checkAllModels": "Перевірити всі моделі",
   "checkDone": "Працюють: {ok}, приховано: {failed}",
   "checkFailed": "Зламаних: {count}",
-  "hiddenModelsCount": "Приховано моделей: {count} — перевірте в налаштуваннях провайдера"
+  "hiddenModelsCount": "Приховано моделей: {count} — перевірте в налаштуваннях провайдера",
+  "codeSave": "Зберегти у файл",
+  "codeSaved": "Файл збережено",
+  "codeExpand": "Показати · {lines} рядків",
+  "@codeExpand": {"placeholders": {"lines": {"type": "int"}}},
+  "codeCollapse": "Згорнути",
+  "codePreview": "Перегляд"
 }

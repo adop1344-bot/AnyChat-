@@ -217,5 +217,11 @@
   "checkAllModels": "Проверить все модели",
   "checkDone": "Рабочих: {ok}, скрыто: {failed}",
   "checkFailed": "Битых: {count}",
-  "hiddenModelsCount": "Скрыто моделей: {count} — перепроверьте в настройках провайдера"
+  "hiddenModelsCount": "Скрыто моделей: {count} — перепроверьте в настройках провайдера",
+  "codeSave": "Сохранить в файл",
+  "codeSaved": "Файл сохранён",
+  "codeExpand": "Развернуть · {lines} строк",
+  "@codeExpand": {"placeholders": {"lines": {"type": "int"}}},
+  "codeCollapse": "Свернуть",
+  "codePreview": "Предпросмотр"
 }

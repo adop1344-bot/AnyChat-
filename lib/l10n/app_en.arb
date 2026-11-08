@@ -221,5 +221,11 @@
   "checkFailed": "{count} failed",
   "@checkFailed": {"placeholders": {"count": {"type": "int"}}},
   "hiddenModelsCount": "{count} models hidden — recheck them in provider settings",
-  "@hiddenModelsCount": {"placeholders": {"count": {"type": "int"}}}
+  "@hiddenModelsCount": {"placeholders": {"count": {"type": "int"}}},
+  "codeSave": "Save as file",
+  "codeSaved": "File saved",
+  "codeExpand": "Show more · {lines} lines",
+  "@codeExpand": {"placeholders": {"lines": {"type": "int"}}},
+  "codeCollapse": "Collapse",
+  "codePreview": "Preview"
 }
