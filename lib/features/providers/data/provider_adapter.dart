@@ -137,14 +137,26 @@ abstract class ProviderAdapter {
 
   /// Returns the text delta for one SSE event, `null` when the stream is
   /// finished, or throws [ApiError] when the provider reported an error.
-  String? parseStreamData(String data);
+/// One streamed chunk: visible answer text and/or model reasoning.
+class StreamDelta {
+  const StreamDelta({this.text = '', this.reasoning = ''});
+
+  const StreamDelta.text(String value) : text = value, reasoning = '';
+
+  const StreamDelta.reasoning(String value) : text = '', reasoning = value;
+
+  final String text;
+  final String reasoning;
+}
+
+  StreamDelta? parseStreamData(String data);
 
   /// Filled by [parseStreamData] when the provider reports usage
   /// (Gemini `usageMetadata`, Anthropic `usage`, OpenAI `usage`).
   ChatUsage? lastUsage;
 
   /// Sends a chat request and yields assistant text as it arrives.
-  Stream<String> streamChat(
+  Stream<StreamDelta> streamChat(
     ChatParams params, {
     Dio? dio,
     CancelToken? cancelToken,
@@ -196,12 +208,12 @@ abstract class ProviderAdapter {
       await for (final event in events) {
         final delta = parseStreamData(event.data);
         if (delta == null) return;
-        if (delta.isNotEmpty) yield delta;
+        if (delta.text.isNotEmpty || delta.reasoning.isNotEmpty) yield delta;
       }
       for (final event in parser.close()) {
         final delta = parseStreamData(event.data);
         if (delta == null) return;
-        if (delta.isNotEmpty) yield delta;
+        if (delta.text.isNotEmpty || delta.reasoning.isNotEmpty) yield delta;
       }
     } on ApiError {
       rethrow;

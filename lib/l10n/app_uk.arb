@@ -220,6 +220,8 @@
   "hiddenModelsCount": "Приховано моделей: {count} — перевірте в налаштуваннях провайдера",
   "codeSave": "Зберегти у файл",
   "codeSaved": "Файл збережено",
+  "thinking": "Роздуми",
+  "thinkingLive": "думає…",
   "codeExpand": "Показати · {lines} рядків",
   "@codeExpand": {"placeholders": {"lines": {"type": "int"}}},
   "codeCollapse": "Згорнути",

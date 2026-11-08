@@ -358,6 +358,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     return MessageBubble(
                       message: message,
                       streamingText: session.streamText,
+                      streamingReasoning: session.streamReasoning,
                       isStreaming: isStreaming,
                       isLast: isLast,
                       showRegenerate: canRegenerate,

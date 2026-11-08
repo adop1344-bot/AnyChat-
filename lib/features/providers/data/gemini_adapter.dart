@@ -116,11 +116,11 @@ class GeminiAdapter extends ProviderAdapter {
   }
 
   @override
-  String? parseStreamData(String data) {
+  StreamDelta? parseStreamData(String data) {
     final text = data.trim();
-    if (text.isEmpty) return '';
+    if (text.isEmpty) return const StreamDelta();
     final decoded = tryDecodeJson(text);
-    if (decoded is! Map) return '';
+    if (decoded is! Map) return const StreamDelta();
     if (decoded['error'] != null) {
       final error = decoded['error'];
       final status =
@@ -158,16 +158,24 @@ class GeminiAdapter extends ProviderAdapter {
       if (first is Map) {
         final content = first['content'];
         if (content is Map && content['parts'] is List) {
-          final buffer = StringBuffer();
+          final textBuffer = StringBuffer();
+          final thinkBuffer = StringBuffer();
           for (final part in content['parts'] as List) {
             if (part is Map && part['text'] is String) {
-              buffer.write(part['text'] as String);
+              if (part['thought'] == true) {
+                thinkBuffer.write(part['text'] as String);
+              } else {
+                textBuffer.write(part['text'] as String);
+              }
             }
           }
-          return buffer.toString();
+          return StreamDelta(
+            text: textBuffer.toString(),
+            reasoning: thinkBuffer.toString(),
+          );
         }
       }
     }
-    return '';
+    return const StreamDelta();
   }
 }

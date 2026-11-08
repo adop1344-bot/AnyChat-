@@ -90,9 +90,13 @@ const int _kCollapseThreshold = 16;
 /// (indented or nested fences the parser treats as plain code) - those
 /// stray fences are stripped here.
 class CodeBlockBuilder extends MarkdownElementBuilder {
-  CodeBlockBuilder({this.snippets = const <CodeSnippet>[]});
+  CodeBlockBuilder({
+    this.snippets = const <CodeSnippet>[],
+    this.messageId,
+  });
 
   final List<CodeSnippet> snippets;
+  final int? messageId;
 
   @override
   bool isBlockElement() => true;
@@ -111,6 +115,7 @@ class CodeBlockBuilder extends MarkdownElementBuilder {
       code: code,
       language: language,
       snippets: snippets,
+      messageId: messageId,
     );
   }
 
@@ -328,6 +333,7 @@ class _CodeBlockCardState extends State<CodeBlockCard> {
         builder: (_) => HtmlPreviewScreen(
           html: widget.code,
           snippets: widget.snippets,
+          messageId: widget.messageId,
         ),
       ),
     );

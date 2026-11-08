@@ -193,13 +193,13 @@ class OpenAIAdapter extends ProviderAdapter {
   }
 
   @override
-  String? parseStreamData(String data) {
+  StreamDelta? parseStreamData(String data) {
     final text = data.trim();
-    if (text.isEmpty) return '';
+    if (text.isEmpty) return const StreamDelta();
     if (text == '[DONE]') return null;
     final decoded = tryDecodeJson(text);
-    if (decoded == null) return '';
-    if (decoded is! Map) return '';
+    if (decoded == null) return const StreamDelta();
+    if (decoded is! Map) return const StreamDelta();
     if (decoded['error'] != null) {
       final error = decoded['error'];
       final status =
@@ -231,17 +231,17 @@ class OpenAIAdapter extends ProviderAdapter {
         final delta = first['delta'];
         if (delta is Map) {
           if (delta['content'] is String) {
-            return delta['content'] as String;
+            return StreamDelta.text(delta['content'] as String);
           }
           final reasoning = delta['reasoning_content'] ?? delta['reasoning'];
           if (reasoning is String) {
-            return reasoning;
+            return StreamDelta.reasoning(reasoning);
           }
         }
         final legacy = first['text'];
-        if (legacy is String) return legacy;
+        if (legacy is String) return StreamDelta.text(legacy);
       }
     }
-    return '';
+    return const StreamDelta();
   }
 }

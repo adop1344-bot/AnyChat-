@@ -153,11 +153,11 @@ class AnthropicAdapter extends ProviderAdapter {
   }
 
   @override
-  String? parseStreamData(String data) {
+  StreamDelta? parseStreamData(String data) {
     final text = data.trim();
-    if (text.isEmpty) return '';
+    if (text.isEmpty) return const StreamDelta();
     final decoded = tryDecodeJson(text);
-    if (decoded is! Map) return '';
+    if (decoded is! Map) return const StreamDelta();
     final type = decoded['type'];
     if (type == 'error') {
       final error = decoded['error'];
@@ -175,7 +175,7 @@ class AnthropicAdapter extends ProviderAdapter {
         final target = lastUsage ??= ChatUsage();
         target.inputTokens = (usage['input_tokens'] as num).toInt();
       }
-      return '';
+      return const StreamDelta();
     }
     if (type == 'message_delta') {
       final usage = decoded['usage'];
@@ -183,15 +183,20 @@ class AnthropicAdapter extends ProviderAdapter {
         final target = lastUsage ??= ChatUsage();
         target.outputTokens = (usage['output_tokens'] as num).toInt();
       }
-      return '';
+      return const StreamDelta();
     }
     if (type == 'message_stop') return null;
     if (type == 'content_block_delta') {
       final delta = decoded['delta'];
-      if (delta is Map && delta['text'] is String) {
-        return delta['text'] as String;
+      if (delta is Map) {
+        if (delta['text'] is String) {
+          return StreamDelta.text(delta['text'] as String);
+        }
+        if (delta['thinking'] is String) {
+          return StreamDelta.reasoning(delta['thinking'] as String);
+        }
       }
     }
-    return '';
+    return const StreamDelta();
   }
 }

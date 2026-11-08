@@ -33,6 +33,7 @@ class Messages extends Table {
   IntColumn get parentId => integer().nullable()();
   TextColumn get role => text()();
   TextColumn get content => text().withDefault(const Constant(''))();
+  TextColumn get reasoning => text().nullable()();
 
   /// JSON array of {@link ChatAttachment} objects (base64 payloads) —
   /// added in schema v2 for multimodal input.
@@ -66,7 +67,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.memory() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -79,6 +80,9 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(chats, chats.usageInput);
             await m.addColumn(chats, chats.usageOutput);
             await m.addColumn(chats, chats.usageThinking);
+          }
+          if (from < 5) {
+            await m.addColumn(messages, messages.reasoning);
           }
           if (from < 4) {
             await m.addColumn(providersConfig, providersConfig.name);

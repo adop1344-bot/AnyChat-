@@ -101,6 +101,7 @@ class Message {
     this.parentId,
     required this.role,
     this.content = '',
+    this.reasoning,
     this.model,
     this.errorType,
     this.errorDetails,
@@ -116,6 +117,9 @@ class Message {
   /// `system`, `user` or `assistant`.
   final String role;
   final String content;
+
+  /// Model reasoning (`<think>` or reasoning deltas), kept out of content.
+  final String? reasoning;
   final String? model;
 
   /// [ApiErrorType.name] of the last failure, if the reply failed.
@@ -134,6 +138,7 @@ class Message {
         parentId: row.parentId,
         role: row.role,
         content: row.content,
+        reasoning: row.reasoning,
         model: row.model,
         errorType: row.errorType,
         errorDetails: row.errorDetails,

@@ -3,6 +3,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../app_providers.dart';
 import '../../../core/errors/api_error.dart';
+import '../../../core/network/think_splitter.dart';
 import '../../../core/storage/token_estimator.dart';
 import '../../../core/errors/debug_log.dart';
 import '../../../features/providers/data/provider_adapter.dart';
@@ -21,6 +22,7 @@ class ChatSessionState {
     this.streamingChatId,
     this.streamingMessageId,
     this.streamText = '',
+    this.streamReasoning = '',
     this.busy = false,
     this.lastError,
     this.lastIssue,
@@ -30,6 +32,7 @@ class ChatSessionState {
   final int? streamingChatId;
   final int? streamingMessageId;
   final String streamText;
+  final String streamReasoning;
   final bool busy;
   final ApiError? lastError;
   final ChatIssue? lastIssue;
@@ -250,7 +253,7 @@ class ChatSession extends _$ChatSession {
       final buffer = StringBuffer();
       await for (final delta
           in session.adapter.streamChat(params, cancelToken: token)) {
-        buffer.write(delta);
+        buffer.write(delta.text);
       }
       final summary = buffer.toString().trim();
       if (summary.isEmpty) {
@@ -356,7 +359,7 @@ class ChatSession extends _$ChatSession {
                 message.attachments.isNotEmpty))
           ChatTurn(
             role: message.role,
-            content: message.content,
+            content: ThinkSplitter.stripThink(message.content),
             attachments: withAttachments
                 ? message.attachments
                 : const <ChatAttachment>[],
@@ -377,7 +380,21 @@ class ChatSession extends _$ChatSession {
       content: '',
       model: session.model,
     );
+    await _streamAttempt(
+      session: session,
+      turns: turns,
+      assistantId: assistantId,
+      attempt: 0,
+    );
+  }
 
+  Future<void> _streamAttempt({
+    required _Session session,
+    required List<ChatTurn> turns,
+    required int assistantId,
+    required int attempt,
+  }) async {
+    final repo = ref.read(messageRepositoryProvider);
     state = ChatSessionState(
       isStreaming: true,
       streamingChatId: session.chat.id,
@@ -399,40 +416,104 @@ class ChatSession extends _$ChatSession {
 
     final token = CancelToken();
     _token = token;
-    final buffer = StringBuffer();
+    final contentBuffer = StringBuffer();
+    final reasoningBuffer = StringBuffer();
+    final splitter = ThinkSplitter();
+    var handedOff = false;
+    var lastPush = DateTime.now();
+
+    Future<void> persist() async {
+      await repo.setContent(assistantId, contentBuffer.toString());
+      if (reasoningBuffer.isNotEmpty) {
+        await repo.setReasoning(assistantId, reasoningBuffer.toString());
+      }
+    }
+
+    Future<void> finish() async {
+      await persist();
+      state = const ChatSessionState();
+    }
+
+    Future<void> recordFailure(ApiError error) async {
+      await persist();
+      await repo.setError(
+        assistantId,
+        errorType: error.type.name,
+        errorDetails: error.details,
+      );
+      ref.read(debugLogProvider.notifier).add(error);
+      state = ChatSessionState(lastError: error);
+    }
+
+    Future<void> recover(ApiError error) async {
+      final interrupted =
+          error.type == ApiErrorType.networkError ||
+          error.type == ApiErrorType.timeout;
+      if (interrupted &&
+          attempt < 1 &&
+          contentBuffer.isEmpty &&
+          reasoningBuffer.isEmpty) {
+        await Future<void>.delayed(const Duration(seconds: 2));
+        if (token.isCancelled) {
+          await finish();
+          return;
+        }
+        handedOff = true;
+        await _streamAttempt(
+          session: session,
+          turns: turns,
+          assistantId: assistantId,
+          attempt: attempt + 1,
+        );
+        return;
+      }
+      await recordFailure(error);
+    }
+
     try {
       await for (final delta
           in session.adapter.streamChat(params, cancelToken: token)) {
-        buffer.write(delta);
-        state = ChatSessionState(
-          isStreaming: true,
-          streamingChatId: session.chat.id,
-          streamingMessageId: assistantId,
-          streamText: buffer.toString(),
-        );
+        if (delta.reasoning.isNotEmpty) {
+          reasoningBuffer.write(delta.reasoning);
+        }
+        if (delta.text.isNotEmpty) {
+          final split = splitter.feed(delta.text);
+          reasoningBuffer.write(split.reasoning);
+          contentBuffer.write(split.content);
+        }
+        final now = DateTime.now();
+        if (now.difference(lastPush) >= const Duration(milliseconds: 120)) {
+          lastPush = now;
+          state = ChatSessionState(
+            isStreaming: true,
+            streamingChatId: session.chat.id,
+            streamingMessageId: assistantId,
+            streamText: contentBuffer.toString(),
+            streamReasoning: reasoningBuffer.toString(),
+          );
+        }
       }
-      await repo.setContent(assistantId, buffer.toString());
-      state = const ChatSessionState();
+      final tail = splitter.close();
+      reasoningBuffer.write(tail.reasoning);
+      contentBuffer.write(tail.content);
+      await finish();
     } on DioException catch (e) {
       if (e.type == DioExceptionType.cancel) {
-        await repo.setContent(assistantId, buffer.toString());
-        state = const ChatSessionState();
+        await finish();
       } else {
-        final error = ApiError.fromDio(e, session.adapter.format);
-        await _recordFailure(repo, assistantId, buffer.toString(), error);
+        await recover(ApiError.fromDio(e, session.adapter.format));
       }
     } on ApiError catch (error) {
-      await _recordFailure(repo, assistantId, buffer.toString(), error);
+      await recover(error);
     } catch (e) {
-      final error = ApiError(
-        type: ApiErrorType.unknown,
-        raw: '$e',
-        cause: e,
+      await recordFailure(
+        ApiError(type: ApiErrorType.unknown, raw: '$e', cause: e),
       );
-      await _recordFailure(repo, assistantId, buffer.toString(), error);
     } finally {
       _token = null;
-      await _recordUsage(session, turns, buffer.toString());
+      if (!handedOff) {
+        await _recordUsage(session, turns, contentBuffer.toString());
+      }
     }
   }
 

@@ -49,6 +49,13 @@ class MessageRepository {
         .write(MessagesCompanion(content: Value(content)));
   }
 
+  Future<void> setReasoning(int messageId, String reasoning) {
+    return (_db.update(_db.messages)..where((t) => t.id.equals(messageId)))
+        .write(
+          MessagesCompanion(reasoning: Value(reasoning.isEmpty ? null : reasoning)),
+        );
+  }
+
   Future<void> setError(
     int messageId, {
     required String? errorType,

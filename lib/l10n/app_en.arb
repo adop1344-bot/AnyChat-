@@ -224,6 +224,8 @@
   "@hiddenModelsCount": {"placeholders": {"count": {"type": "int"}}},
   "codeSave": "Save as file",
   "codeSaved": "File saved",
+  "thinking": "Thinking",
+  "thinkingLive": "thinking…",
   "codeExpand": "Show more · {lines} lines",
   "@codeExpand": {"placeholders": {"lines": {"type": "int"}}},
   "codeCollapse": "Collapse",

@@ -23,6 +23,7 @@ class MessageBubble extends StatelessWidget {
     super.key,
     required this.message,
     required this.streamingText,
+    this.streamingReasoning = '',
     required this.isStreaming,
     required this.isLast,
     required this.showRegenerate,
@@ -34,6 +35,7 @@ class MessageBubble extends StatelessWidget {
 
   final Message message;
   final String streamingText;
+  final String streamingReasoning;
   final bool isStreaming;
   final bool isLast;
   final bool showRegenerate;
@@ -49,6 +51,9 @@ class MessageBubble extends StatelessWidget {
     final scheme = theme.colorScheme;
     final isUser = message.role == 'user';
     final text = isStreaming ? streamingText : message.content;
+    final reasoning = isStreaming
+        ? streamingReasoning
+        : message.reasoning ?? '';
     final storedError = message.errorType;
     final error = storedError == null
         ? null
@@ -80,12 +85,25 @@ class MessageBubble extends StatelessWidget {
             ],
           ),
         ),
+      if (reasoning.trim().isNotEmpty)
+        _ThinkingBlock(reasoning: reasoning, live: isStreaming),
       if (isStreaming)
         text.isEmpty
-            ? Text(l10n.generating, style: generatingStyle)
-            : _MessageBody(content: text, isUser: isUser, streaming: true)
+            ? (reasoning.trim().isEmpty
+                ? Text(l10n.generating, style: generatingStyle)
+                : const SizedBox.shrink())
+            : _MessageBody(
+                content: text,
+                isUser: isUser,
+                streaming: true,
+                messageId: message.id,
+              )
       else if (message.content.isNotEmpty)
-        _MessageBody(content: message.content, isUser: isUser)
+        _MessageBody(
+          content: message.content,
+          isUser: isUser,
+          messageId: message.id,
+        )
       else if (error == null)
         Text(l10n.generating, style: generatingStyle),
       if (error != null) ...<Widget>[
@@ -291,11 +309,13 @@ class _MessageBody extends StatelessWidget {
     required this.content,
     required this.isUser,
     this.streaming = false,
+    this.messageId,
   });
 
   final String content;
   final bool isUser;
   final bool streaming;
+  final int? messageId;
 
   @override
   Widget build(BuildContext context) {
@@ -310,7 +330,10 @@ class _MessageBody extends StatelessWidget {
         onTapLink: (String text, String? href, String title) =>
             _openLink(context, href),
         builders: <String, MarkdownElementBuilder>{
-          'pre': CodeBlockBuilder(snippets: extractCodeSnippets(content)),
+          'pre': CodeBlockBuilder(
+            snippets: extractCodeSnippets(content),
+            messageId: messageId,
+          ),
         },
         styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
           p: theme.textTheme.bodyMedium,
@@ -347,5 +370,97 @@ class _MessageBody extends StatelessWidget {
         SnackBar(content: Text(l10n.errUnknown(href))),
       );
     }
+  }
+}
+
+class _ThinkingBlock extends StatefulWidget {
+  const _ThinkingBlock({required this.reasoning, required this.live});
+
+  final String reasoning;
+  final bool live;
+
+  @override
+  State<_ThinkingBlock> createState() => _ThinkingBlockState();
+}
+
+class _ThinkingBlockState extends State<_ThinkingBlock> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final style = theme.textTheme.bodySmall?.copyWith(
+      color: scheme.onSurfaceVariant,
+      fontStyle: FontStyle.italic,
+      height: 1.35,
+    );
+    final label = widget.live && widget.reasoning.trim().isEmpty
+        ? l10n.thinkingLive
+        : l10n.thinking;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Icon(
+                  widget.live ? Icons.psychology : Icons.psychology_outlined,
+                  size: 14,
+                  color: scheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 5),
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: style?.copyWith(fontStyle: FontStyle.normal),
+                  ),
+                ),
+                Icon(
+                  _expanded ? Icons.expand_less : Icons.expand_more,
+                  size: 16,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ],
+            ),
+          ),
+          if (!_expanded &&
+              widget.live &&
+              widget.reasoning.trim().isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 2, left: 2),
+              child: Text(
+                widget.reasoning.trim().split('\n').last.trim(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: style,
+              ),
+            ),
+          if (_expanded && widget.reasoning.trim().isNotEmpty)
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(top: 4),
+              padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: scheme.outlineVariant.withValues(alpha: 0.5),
+                ),
+              ),
+              child: Text(widget.reasoning.trim(), style: style),
+            ),
+        ],
+      ),
+    );
   }
 }

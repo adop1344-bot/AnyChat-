@@ -164,7 +164,7 @@ Future<ModelCheckSummary> checkAllProviderModels(
       var ok = true;
       try {
         final adapter = adapterFor(provider.format);
-        await for (final String delta in adapter
+        await for (final delta in adapter
             .streamChat(ChatParams(
               apiKey: key,
               baseUrl: provider.baseUrl,
@@ -174,7 +174,7 @@ Future<ModelCheckSummary> checkAllProviderModels(
               timeout: const Duration(seconds: 15),
             ))
             .timeout(const Duration(seconds: 45))) {
-          if (delta.isNotEmpty) break;
+          if (delta.text.isNotEmpty || delta.reasoning.isNotEmpty) break;
         }
       } catch (_) {
         ok = false;
