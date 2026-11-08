@@ -513,13 +513,23 @@ void main() {
     test('anthropic deltas and stop event', () {
       final adapter = AnthropicAdapter();
       expect(
-        adapter.parseStreamData(
-          '{"type":"content_block_delta","delta":{"type":"text_delta","text":"ok"}}',
-        ),
+        adapter
+            .parseStreamData(
+              '{"type":"content_block_delta","delta":{"type":"text_delta","text":"ok"}}',
+            )
+            ?.text,
         'ok',
       );
+      expect(
+        adapter
+            .parseStreamData(
+              '{"type":"content_block_delta","delta":{"type":"thinking_delta","thinking":"erm"}}',
+            )
+            ?.reasoning,
+        'erm',
+      );
       expect(adapter.parseStreamData('{"type":"message_stop"}'), isNull);
-      expect(adapter.parseStreamData('{"type":"ping"}'), '');
+      expect(adapter.parseStreamData('{"type":"ping"}')?.text, '');
     });
 
     test('anthropic error event maps kinds to statuses', () {
