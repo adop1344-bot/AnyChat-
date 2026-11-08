@@ -486,11 +486,18 @@ void main() {
     test('openai deltas and [DONE]', () {
       final adapter = OpenAIAdapter();
       expect(
-        adapter.parseStreamData('{"choices":[{"delta":{"content":"Hi"}}]}'),
+        adapter.parseStreamData('{"choices":[{"delta":{"content":"Hi"}}]}')
+            ?.text,
         'Hi',
       );
+      expect(
+        adapter
+            .parseStreamData('{"choices":[{"delta":{"reasoning":"erm"}}]}')
+            ?.reasoning,
+        'erm',
+      );
       expect(adapter.parseStreamData('[DONE]'), isNull);
-      expect(adapter.parseStreamData(''), '');
+      expect(adapter.parseStreamData('')?.text, '');
     });
 
     test('openai in-stream error becomes ApiError', () {
@@ -539,10 +546,21 @@ void main() {
     test('gemini concatenates text parts', () {
       final adapter = GeminiAdapter();
       expect(
-        adapter.parseStreamData(
-          '{"candidates":[{"content":{"parts":[{"text":"He"},{"text":"llo"}]}}]}',
-        ),
+        adapter
+            .parseStreamData(
+              '{"candidates":[{"content":{"parts":[{"text":"He"},{"text":"llo"}]}}]}',
+            )
+            ?.text,
         'Hello',
+      );
+      expect(
+        adapter
+            .parseStreamData(
+              '{"candidates":[{"content":{"parts":[{"thought":true,"text":"hmm"},'
+              '{"text":"!"}]}}]}',
+            )
+            ?.reasoning,
+        'hmm',
       );
       expect(
         () => adapter.parseStreamData('{"promptFeedback":{"blockReason":"SAFETY"}}'),
@@ -565,7 +583,10 @@ void main() {
       final deltas =
           await adapter.streamChat(_params(), dio: dio).toList();
 
-      expect(deltas, <String>['Hel', 'lo']);
+      expect(
+        <String>[for (final d in deltas) d.text],
+        <String>['Hel', 'lo'],
+      );
       expect(
         fake.lastRequest!.uri.toString(),
         'https://api.openai.com/v1/chat/completions',
