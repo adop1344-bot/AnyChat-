@@ -9,7 +9,6 @@ import '../../../core/errors/debug_log.dart';
 import '../../../features/providers/data/provider_adapter.dart';
 import '../../settings/app_settings.dart';
 import '../../settings/state/settings_controller.dart';
-import '../data/message_repository.dart';
 import '../domain/models.dart';
 
 part 'chat_session.g.dart';
