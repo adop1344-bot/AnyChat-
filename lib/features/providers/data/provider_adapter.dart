@@ -123,6 +123,18 @@ class ChatUsage {
 }
 
 /// Shared HTTP plumbing; subclasses only describe the wire format.
+/// One streamed chunk: visible answer text and/or model reasoning.
+class StreamDelta {
+  const StreamDelta({this.text = '', this.reasoning = ''});
+
+  const StreamDelta.text(String value) : text = value, reasoning = '';
+
+  const StreamDelta.reasoning(String value) : text = '', reasoning = value;
+
+  final String text;
+  final String reasoning;
+}
+
 abstract class ProviderAdapter {
   ApiFormat get format;
 
@@ -137,18 +149,6 @@ abstract class ProviderAdapter {
 
   /// Returns the text delta for one SSE event, `null` when the stream is
   /// finished, or throws [ApiError] when the provider reported an error.
-/// One streamed chunk: visible answer text and/or model reasoning.
-class StreamDelta {
-  const StreamDelta({this.text = '', this.reasoning = ''});
-
-  const StreamDelta.text(String value) : text = value, reasoning = '';
-
-  const StreamDelta.reasoning(String value) : text = '', reasoning = value;
-
-  final String text;
-  final String reasoning;
-}
-
   StreamDelta? parseStreamData(String data);
 
   /// Filled by [parseStreamData] when the provider reports usage
