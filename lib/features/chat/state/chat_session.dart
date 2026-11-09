@@ -550,10 +550,6 @@ class ChatSession extends _$ChatSession {
             continue;
           }
 
-            rounds++;
-            continue;
-          }
-
           if (tool.kind == 'RUN') {
             if (!shellEnabled) {
               steps.add(
