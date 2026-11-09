@@ -20,8 +20,11 @@ class OpenAIAdapter extends ProviderAdapter {
           for (final turn in turns) _messageFor(turn),
         ],
         'stream': true,
-        if (params.reasoningEffort != null)
-          'reasoning_effort': params.reasoningEffort,
+        if (params.reasoningEffort != null &&
+            params.reasoningEffort != 'off')
+          'reasoning_effort': params.reasoningEffort == 'extreme'
+              ? 'high'
+              : params.reasoningEffort!,
         if (params.maxTokens != null)
           if (isReasoningModel(params.model))
             'max_completion_tokens': params.maxTokens

@@ -3,7 +3,9 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../app_providers.dart';
 import '../../../core/errors/api_error.dart';
+import '../../../core/network/stream_guard.dart';
 import '../../../core/network/think_splitter.dart';
+import '../../../core/web/web_search.dart';
 import '../../../core/storage/token_estimator.dart';
 import '../../../core/errors/debug_log.dart';
 import '../../../features/providers/data/provider_adapter.dart';
@@ -25,6 +27,7 @@ class ChatSessionState {
     this.busy = false,
     this.lastError,
     this.lastIssue,
+    this.toolNotice = '',
   });
 
   final bool isStreaming;
@@ -35,6 +38,8 @@ class ChatSessionState {
   final bool busy;
   final ApiError? lastError;
   final ChatIssue? lastIssue;
+
+  final String toolNotice;
 
   bool get hasFailure => lastError != null || lastIssue != null;
 }
@@ -113,7 +118,10 @@ class ChatSession extends _$ChatSession {
     await _generate(session: session, turns: _historyTurns(session, fresh));
   }
 
+  var _stopRequested = false;
+
   void stop() {
+    _stopRequested = true;
     final token = _token;
     if (token != null && !token.isCancelled) {
       token.cancel();
@@ -371,6 +379,7 @@ class ChatSession extends _$ChatSession {
     required List<ChatTurn> turns,
   }) async {
     if (turns.isEmpty) return;
+    _stopRequested = false;
     final repo = ref.read(messageRepositoryProvider);
     final assistantId = await repo.insertMessage(
       chatId: session.chat.id,
@@ -379,25 +388,109 @@ class ChatSession extends _$ChatSession {
       content: '',
       model: session.model,
     );
-    await _streamAttempt(
-      session: session,
-      turns: turns,
-      assistantId: assistantId,
-      attempt: 0,
-    );
+    var webTurns = turns;
+    if (session.settings.webSearch) {
+      webTurns = _withWebHint(turns);
+    }
+    var content = '';
+    var reasoning = '';
+    var rounds = 0;
+    await StreamGuard.begin();
+    try {
+      while (true) {
+        content = await _streamAttempt(
+          session: session,
+          turns: webTurns,
+          assistantId: assistantId,
+          attempt: 0,
+          seedContent: content,
+          seedReasoning: reasoning,
+        );
+        if (!session.settings.webSearch || _stopRequested) break;
+        if (state.lastError != null) break;
+        final tool = WebToolCall.extract(content);
+        if (tool == null || rounds >= 3) break;
+        final visible = content.substring(0, tool.start).trimRight();
+        content = visible;
+        await repo.setContent(assistantId, visible);
+        state = ChatSessionState(
+          isStreaming: true,
+          streamingChatId: session.chat.id,
+          streamingMessageId: assistantId,
+          streamText: visible,
+          streamReasoning: reasoning,
+          toolNotice: tool.kind == 'OPEN'
+              ? '📖 Читаю страницу…'
+              : '🔍 Ищу: ${tool.argument}',
+        );
+        final result = await WebSearch.run(tool);
+        if (_stopRequested) break;
+        state = ChatSessionState(
+          isStreaming: true,
+          streamingChatId: session.chat.id,
+          streamingMessageId: assistantId,
+          streamText: visible,
+          streamReasoning: reasoning,
+        );
+        webTurns = <ChatTurn>[
+          ...webTurns,
+          ChatTurn(role: 'assistant', content: visible),
+          ChatTurn(
+            role: 'user',
+            content: '$result\n\nИспользуй эти данные и продолжай ответ '
+                'пользователю на его языке. Не повторяй уже написанное и не '
+                'выводи служебные строки SEARCH/OPEN.',
+          ),
+        ];
+        rounds++;
+      }
+    } finally {
+      await StreamGuard.end();
+    }
   }
 
-  Future<void> _streamAttempt({
+  List<ChatTurn> _withWebHint(List<ChatTurn> turns) {
+    const hint =
+        '\n\nWEB TOOL: You can use the web. To search, output a single line '
+        '"SEARCH: <query>" and STOP — the system will return results and you '
+        'continue. To read a web page, output "OPEN: <url>" and STOP. Use at '
+        'most 3 tool calls per answer, then give the final answer to the user '
+        'in their language.';
+    final hasSystem = turns.any((ChatTurn t) => t.role == 'system');
+    if (!hasSystem) {
+      return <ChatTurn>[
+        ChatTurn(role: 'system', content: hint.trim()),
+        ...turns,
+      ];
+    }
+    return <ChatTurn>[
+      for (final ChatTurn t in turns)
+        if (t.role == 'system')
+          ChatTurn(
+            role: t.role,
+            content: t.content + hint,
+            attachments: t.attachments,
+          )
+        else
+          t,
+    ];
+  }
+
+  Future<String> _streamAttempt({
     required _Session session,
     required List<ChatTurn> turns,
     required int assistantId,
     required int attempt,
+    String seedContent = '',
+    String seedReasoning = '',
   }) async {
     final repo = ref.read(messageRepositoryProvider);
     state = ChatSessionState(
       isStreaming: true,
       streamingChatId: session.chat.id,
       streamingMessageId: assistantId,
+      streamText: seedContent,
+      streamReasoning: seedReasoning,
     );
 
     final params = ChatParams(
@@ -405,7 +498,8 @@ class ChatSession extends _$ChatSession {
       baseUrl: session.baseUrl,
       model: session.model,
       turns: turns,
-      reasoningEffort: session.settings.reasoningEffort.isEmpty
+      reasoningEffort: (session.settings.reasoningEffort.isEmpty ||
+              session.settings.reasoningEffort == 'auto')
           ? null
           : session.settings.reasoningEffort,
       maxTokens: session.settings.maxTokens,
@@ -415,8 +509,8 @@ class ChatSession extends _$ChatSession {
 
     final token = CancelToken();
     _token = token;
-    final contentBuffer = StringBuffer();
-    final reasoningBuffer = StringBuffer();
+    final contentBuffer = StringBuffer(seedContent);
+    final reasoningBuffer = StringBuffer(seedReasoning);
     final splitter = ThinkSplitter();
     var handedOff = false;
     var lastPush = DateTime.now();

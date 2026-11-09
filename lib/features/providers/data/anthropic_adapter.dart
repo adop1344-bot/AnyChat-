@@ -47,6 +47,16 @@ class AnthropicAdapter extends ProviderAdapter {
         body['system'] = system;
       }
     }
+    final thinkingBudget = _thinkingBudget(params);
+    if (thinkingBudget != null) {
+      var maxTokens = params.maxTokens ?? 4096;
+      if (maxTokens <= thinkingBudget) maxTokens = thinkingBudget + 2048;
+      body['max_tokens'] = maxTokens;
+      body['thinking'] = <String, dynamic>{
+        'type': 'enabled',
+        'budget_tokens': thinkingBudget,
+      };
+    }
     return ChatRequest(
       url: joinUrl(params.baseUrl, '/messages'),
       headers: <String, String>{
@@ -55,6 +65,21 @@ class AnthropicAdapter extends ProviderAdapter {
       },
       body: body,
     );
+  }
+
+  static int? _thinkingBudget(ChatParams params) {
+    switch (params.reasoningEffort) {
+      case 'low':
+        return 2048;
+      case 'medium':
+        return 4096;
+      case 'high':
+        return 8192;
+      case 'extreme':
+        return 16384;
+      default:
+        return null;
+    }
   }
 
   static Map<String, dynamic> _messageFor(ChatTurn turn) {

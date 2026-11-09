@@ -13,6 +13,7 @@ class AppSettings {
     this.historyDepth,
     this.accentColor = 'system',
     this.reasoningEffort = '',
+    this.webSearch = false,
     this.promptCaching = true,
     this.favoriteModels = const <String>[],
     this.selectedProviderId = '',
@@ -41,6 +42,8 @@ class AppSettings {
 
   final String reasoningEffort;
 
+  final bool webSearch;
+
   final bool promptCaching;
 
   final List<String> favoriteModels;
@@ -66,6 +69,7 @@ class AppSettings {
       historyDepth: prefs.getInt('history_depth'),
       accentColor: prefs.getString('accent_color') ?? 'system',
       reasoningEffort: prefs.getString('reasoning_effort') ?? '',
+      webSearch: prefs.getBool('web_search') ?? false,
       promptCaching: prefs.getBool('prompt_caching') ?? true,
       favoriteModels:
           prefs.getStringList('favorite_models') ?? const <String>[],
@@ -107,6 +111,7 @@ class AppSettings {
     Object? historyDepth = _unspecified,
     String? accentColor,
     String? reasoningEffort,
+    bool? webSearch,
     bool? promptCaching,
     List<String>? favoriteModels,
     String? selectedProviderId,
@@ -134,6 +139,7 @@ class AppSettings {
           : historyDepth as int?,
       accentColor: accentColor ?? this.accentColor,
       reasoningEffort: reasoningEffort ?? this.reasoningEffort,
+      webSearch: webSearch ?? this.webSearch,
       promptCaching: promptCaching ?? this.promptCaching,
       favoriteModels: favoriteModels ?? this.favoriteModels,
       selectedProviderId: selectedProviderId ?? this.selectedProviderId,
@@ -180,6 +186,7 @@ class AppSettings {
     await _setOrNull(prefs, 'history_depth', historyDepth);
     await prefs.setString('accent_color', accentColor);
     await prefs.setString('reasoning_effort', reasoningEffort);
+    await prefs.setBool('web_search', webSearch);
     await prefs.setBool('prompt_caching', promptCaching);
     await prefs.setStringList('favorite_models', favoriteModels);
     await _setOrNull(

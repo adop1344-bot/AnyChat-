@@ -376,6 +376,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 onChanged: (bool value) =>
                     _controller.setPromptCaching(value),
               ),
+              SwitchListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                title: const Text('Поиск в интернете'),
+                subtitle: const Text(
+                  'Модель может искать в DuckDuckGo и читать страницы',
+                ),
+                value: settings.webSearch,
+                onChanged: (bool value) => _controller.setWebSearch(value),
+              ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
                 child: TextField(

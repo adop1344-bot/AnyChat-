@@ -10,6 +10,7 @@ class GeminiAdapter extends ProviderAdapter {
   @override
   ChatRequest buildChatRequest(ChatParams params) {
     final turns = ProviderAdapter.mergeTurns(params.turns);
+    final thinkingBudget = _thinkingBudget(params);
     final system = ProviderAdapter.systemPromptOf(turns);
     final contents = <Map<String, dynamic>>[];
     for (final turn in turns) {
@@ -36,12 +37,34 @@ class GeminiAdapter extends ProviderAdapter {
             ],
           },
         'contents': contents,
-        if (params.maxTokens != null)
+        if (params.maxTokens != null || thinkingBudget != null)
           'generationConfig': <String, dynamic>{
-            'maxOutputTokens': params.maxTokens,
+            if (params.maxTokens != null)
+              'maxOutputTokens': params.maxTokens,
+            if (thinkingBudget != null)
+              'thinkingConfig': <String, dynamic>{
+                'thinkingBudget': thinkingBudget,
+              },
           },
       },
     );
+  }
+
+  static int? _thinkingBudget(ChatParams params) {
+    switch (params.reasoningEffort) {
+      case 'off':
+        return 0;
+      case 'low':
+        return 1024;
+      case 'medium':
+        return 4096;
+      case 'high':
+        return 16384;
+      case 'extreme':
+        return -1;
+      default:
+        return null;
+    }
   }
 
   static List<Map<String, dynamic>> _partsFor(ChatTurn turn) {

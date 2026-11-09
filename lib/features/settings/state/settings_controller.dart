@@ -56,6 +56,9 @@ class SettingsController extends _$SettingsController {
   Future<void> setReasoningEffort(String value) =>
       _update((s) => s.copyWith(reasoningEffort: value));
 
+  Future<void> setWebSearch(bool value) =>
+      _update((s) => s.copyWith(webSearch: value));
+
   Future<void> setPromptCaching(bool value) =>
       _update((s) => s.copyWith(promptCaching: value));
 
