@@ -16,14 +16,18 @@ class ChatComposer extends ConsumerStatefulWidget {
   const ChatComposer({
     super.key,
     required this.isBusy,
+    this.controller,
     required this.onStop,
     required this.onSend,
+    this.onTextChanged,
     this.contextUsed,
     this.contextLimit,
     this.onContextTap,
   });
 
   final bool isBusy;
+  final TextEditingController? controller;
+  final ValueChanged<String>? onTextChanged;
   final VoidCallback onStop;
   final Future<void> Function(String text, List<ChatAttachment> attachments)
       onSend;
@@ -39,6 +43,8 @@ class _ChatComposerState extends ConsumerState<ChatComposer> {
   static const int _maxAttachmentBytes = 20 * 1024 * 1024;
 
   final TextEditingController _controller = TextEditingController();
+  late final TextEditingController _eff =
+      widget.controller ?? _controller;
   final FocusNode _focus = FocusNode();
 
   final List<ChatAttachment> _pending = <ChatAttachment>[];
@@ -178,7 +184,7 @@ class _ChatComposerState extends ConsumerState<ChatComposer> {
     final text = _controller.text;
     final attachments = List<ChatAttachment>.of(_pending);
     if (text.trim().isEmpty && attachments.isEmpty) return;
-    _controller.clear();
+    _eff.clear();
     if (_pending.isNotEmpty) {
       setState(_pending.clear);
     }
@@ -246,7 +252,7 @@ class _ChatComposerState extends ConsumerState<ChatComposer> {
           error: (Object error, StackTrace stack) => const AppSettings(),
         );
     return InputBar(
-      controller: _controller,
+      controller: _eff,
       focusNode: _focus,
       isBusy: widget.isBusy,
       onSend: _send,
@@ -258,6 +264,7 @@ class _ChatComposerState extends ConsumerState<ChatComposer> {
       contextUsed: widget.contextUsed,
       contextLimit: widget.contextLimit,
       onContextTap: widget.onContextTap,
+      onTextChanged: widget.onTextChanged,
       onReasoningTap: _openReasoningSheet,
       reasoningLevel: settings.reasoningEffort,
     );

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -12,6 +14,9 @@ import '../state/chat_providers.dart';
 import '../state/chat_session.dart';
 import '../state/current_chat.dart';
 import 'widgets/chat_composer.dart';
+import 'widgets/command_palette.dart';
+import 'widgets/mascot.dart';
+import 'widgets/widget_cards.dart';
 import 'widgets/context_circle.dart';
 import 'widgets/menu_glyph.dart';
 import 'widgets/message_bubble.dart';
@@ -112,6 +117,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       },
     );
 
+    final _mascot = _mascotState(
+      session.isStreaming,
+      session.streamText,
+      session.streamReasoning,
+      messagesAsync.asData?.value.length ?? 0,
+    );
+
     final branches = branchesAsync.when(
       data: (List<Branch> value) => value,
       loading: () => <Branch>[],
@@ -140,6 +152,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             builder: (BuildContext scaffoldContext) => SafeArea(
               child: Stack(
                 children: <Widget>[
+                  if (_mascot != null)
+                    Positioned(
+                      right: 16,
+                      bottom: 100,
+                      child: Mascot(state: _mascot!, size: 44),
+                    ),
                   if (_showJump)
                     Positioned(
                       left: 20,
@@ -183,6 +201,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           ),
                         ),
                       const SizedBox(height: 56),
+                      ChatWidgetStrip(chatId: widget.chatId),
                       Expanded(
                         child: messagesAsync.when(
                           loading: () => const Center(
@@ -398,6 +417,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       message: message,
                       streamingText: session.streamText,
                       streamingReasoning: session.streamReasoning,
+                      toolSteps: isStreaming
+                          ? session.streamToolSteps
+                          : message.toolSteps,
                       isStreaming: isStreaming,
                       isLast: isLast,
                       showRegenerate: canRegenerate,
@@ -419,7 +441,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   },
                 ),
         ),
+        if (_palettePrefix != null)
+          CommandPalette(
+            onPick: (String cmd) {
+              _inputController.text = '$cmd ';
+              _inputController.selection = TextSelection.fromPosition(
+                TextPosition(offset: _inputController.text.length),
+              );
+              setState(() => _palettePrefix = null);
+            },
+          ),
         ChatComposer(
+          controller: _inputController,
+          onTextChanged: _onInputChanged,
           isBusy: session.isStreaming || session.busy,
           onStop: () => ref.read(chatSessionProvider.notifier).stop(),
           onSend: (String text, List<ChatAttachment> attachments) =>
@@ -443,7 +477,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   final ScrollController _scroll = ScrollController();
+  final TextEditingController _inputController = TextEditingController();
   bool _showJump = false;
+  String? _palettePrefix;
+  Timer? _pulse;
+  int _mascotLen = -1;
+  int _mascotMsgCount = -1;
+  DateTime _mascotProgressAt = DateTime.now();
+  DateTime _mascotActivityAt = DateTime.now();
 
   void _onScroll() {
     final show = _scroll.hasClients && _scroll.offset > 600;
@@ -456,12 +497,56 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   void initState() {
     super.initState();
     _scroll.addListener(_onScroll);
+    _pulse = Timer.periodic(const Duration(seconds: 2), (_) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
   void dispose() {
+    _pulse?.cancel();
     _scroll.dispose();
+    _inputController.dispose();
     super.dispose();
+  }
+
+  void _onInputChanged(String text) {
+    final t = text.trimLeft();
+    final show = t.startsWith('/') &&
+        !t.contains(' ') &&
+        kChatCommands.any((ChatCommand c) => c.name.startsWith(t));
+    final next = show ? t : null;
+    if (next != _palettePrefix) {
+      setState(() => _palettePrefix = next);
+    }
+  }
+
+  MascotState? _mascotState(bool isStreaming, String streamText,
+      String streamReasoning, int msgCount) {
+    final now = DateTime.now();
+    if (msgCount != _mascotMsgCount) {
+      _mascotMsgCount = msgCount;
+      _mascotActivityAt = now;
+    }
+    if (isStreaming) {
+      _mascotActivityAt = now;
+      final len = streamText.length + streamReasoning.length;
+      if (len != _mascotLen) {
+        _mascotLen = len;
+        _mascotProgressAt = now;
+      }
+      if (now.difference(_mascotProgressAt) > const Duration(seconds: 20)) {
+        return MascotState.sleeping;
+      }
+      return streamText.isEmpty
+          ? MascotState.thinking
+          : MascotState.writing;
+    }
+    _mascotLen = -1;
+    if (now.difference(_mascotActivityAt) > const Duration(minutes: 3)) {
+      return MascotState.sleeping;
+    }
+    return null;
   }
 
   void _showContextStats(

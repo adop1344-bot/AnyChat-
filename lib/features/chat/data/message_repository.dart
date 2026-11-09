@@ -15,6 +15,13 @@ class MessageRepository {
     return query.watch().map((rows) => rows.map(dm.Message.fromRow).toList());
   }
 
+  Future<void> setToolSteps(int id, List<dm.ToolStep> steps) {
+    return (_db.update(_db.messages)..where((t) => t.id.equals(id)))
+        .write(MessagesCompanion(
+          toolSteps: Value(dm.ToolStep.encodeList(steps)),
+        ));
+  }
+
   Future<List<dm.Message>> messagesInBranch(int branchId) {
     final query = _db.select(_db.messages)
       ..where((t) => t.branchId.equals(branchId))

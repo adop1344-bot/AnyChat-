@@ -21,6 +21,7 @@ class InputBar extends StatefulWidget {
     this.contextUsed,
     this.contextLimit,
     this.onContextTap,
+    this.onTextChanged,
     this.onReasoningTap,
     this.reasoningLevel = '',
   });
@@ -37,6 +38,7 @@ class InputBar extends StatefulWidget {
   final int? contextUsed;
   final int? contextLimit;
   final VoidCallback? onContextTap;
+  final ValueChanged<String>? onTextChanged;
   final VoidCallback? onReasoningTap;
   final String reasoningLevel;
 
@@ -72,6 +74,7 @@ class _InputBarState extends State<InputBar> {
     if (hasText != _hasText) {
       setState(() => _hasText = hasText);
     }
+    widget.onTextChanged?.call(widget.controller.text);
   }
 
   @override

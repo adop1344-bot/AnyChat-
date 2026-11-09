@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/storage/db.dart';
 import 'core/storage/secure_storage.dart';
 import 'features/chat/data/chat_repository.dart';
+import 'features/chat/data/widget_repository.dart';
 import 'features/chat/data/message_repository.dart';
 import 'features/providers/data/provider_config_repository.dart';
 
@@ -18,6 +19,15 @@ final chatRepositoryProvider = Provider<ChatRepository>(
 
 final messageRepositoryProvider = Provider<MessageRepository>(
   (ref) => MessageRepository(ref.watch(databaseProvider)),
+);
+
+final widgetRepositoryProvider = Provider<WidgetRepository>(
+  (ref) => WidgetRepository(ref.watch(databaseProvider)),
+);
+
+final widgetListProvider = StreamProvider.autoDispose
+    .family<List<ChatWidget>, int>(
+  (ref, chatId) => ref.watch(widgetRepositoryProvider).watchByChat(chatId),
 );
 
 final providerConfigRepositoryProvider = Provider<ProviderConfigRepository>(

@@ -53,6 +53,56 @@ class WebSearch {
   }
 
   static Future<String> search(String query) async {
+    try {
+      final bing = await _bingRss(query);
+      if (bing != null) return bing;
+    } catch (_) {}
+    return _ddgLite(query);
+  }
+
+  static Future<String?> _bingRss(String query) async {
+    final resp = await _dio.get<String>(
+      'https://www.bing.com/search',
+      queryParameters: <String, dynamic>{'q': query, 'format': 'rss'},
+      options: Options(responseType: ResponseType.plain),
+    );
+    final xml = resp.data ?? '';
+    final items = RegExp(r'<item>(.*?)</item>', dotAll: true)
+        .allMatches(xml)
+        .toList();
+    if (items.isEmpty) return null;
+    final b = StringBuffer('Результаты Bing по запросу "$query":\n');
+    var i = 0;
+    for (final m in items) {
+      if (i >= 6) break;
+      final block = m.group(1)!;
+      final title = _xmlTag(block, 'title');
+      final link = _xmlTag(block, 'link');
+      final desc = _stripTags(_xmlTag(block, 'description'));
+      if (link.isEmpty) continue;
+      b.writeln('${i + 1}. ${title.isEmpty ? link : title}');
+      b.writeln('   URL: $link');
+      if (desc.isNotEmpty) {
+        b.writeln('   ${desc.length > 320 ? desc.substring(0, 320) : desc}');
+      }
+      i++;
+    }
+    return i == 0 ? null : b.toString();
+  }
+
+  static String _xmlTag(String xml, String tag) {
+    final m = RegExp('<$tag>(.*?)</$tag>', dotAll: true).firstMatch(xml);
+    if (m == null) return '';
+    return m.group(1)!
+        .trim()
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&apos;', "'")
+        .replaceAll('&amp;', '&');
+  }
+
+  static Future<String> _ddgLite(String query) async {
     final resp = await _dio.get<String>(
       'https://lite.duckduckgo.com/lite/',
       queryParameters: <String, dynamic>{'q': query},

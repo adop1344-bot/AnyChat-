@@ -93,6 +93,50 @@ class ChatAttachment {
   bool get isAudio => kind == 'audio';
 }
 
+class ToolStep {
+  const ToolStep({
+    required this.kind,
+    required this.argument,
+    this.summary = '',
+  });
+
+  /// `SEARCH` / `OPEN` / `WIDGET`.
+  final String kind;
+  final String argument;
+  final String summary;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'kind': kind,
+        'argument': argument,
+        'summary': summary,
+      };
+
+  factory ToolStep.fromJson(Map<String, dynamic> json) => ToolStep(
+        kind: (json['kind'] ?? '').toString(),
+        argument: (json['argument'] ?? '').toString(),
+        summary: (json['summary'] ?? '').toString(),
+      );
+
+  static String encodeList(List<ToolStep> steps) =>
+      jsonEncode(<Map<String, dynamic>>[for (final s in steps) s.toJson()]);
+
+  static List<ToolStep> decodeList(String? raw) {
+    if (raw == null || raw.isEmpty) return const <ToolStep>[];
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is List) {
+        return <ToolStep>[
+          for (final item in decoded)
+            if (item is Map<String, dynamic>) ToolStep.fromJson(item),
+        ];
+      }
+    } on FormatException {
+      return const <ToolStep>[];
+    }
+    return const <ToolStep>[];
+  }
+}
+
 class Message {
   const Message({
     required this.id,
@@ -106,6 +150,7 @@ class Message {
     this.errorType,
     this.errorDetails,
     this.attachments = const <ChatAttachment>[],
+    this.toolSteps = const <ToolStep>[],
     required this.createdAt,
   });
 
@@ -129,6 +174,9 @@ class Message {
   /// Media attached to a user message (empty for text-only messages).
   final List<ChatAttachment> attachments;
 
+  /// Tool calls made while producing this reply (search, widgets).
+  final List<ToolStep> toolSteps;
+
   final DateTime createdAt;
 
   factory Message.fromRow(db.Message row) => Message(
@@ -143,6 +191,7 @@ class Message {
         errorType: row.errorType,
         errorDetails: row.errorDetails,
         attachments: parseAttachments(row.attachments),
+        toolSteps: ToolStep.decodeList(row.toolSteps),
         createdAt: row.createdAt,
       );
 

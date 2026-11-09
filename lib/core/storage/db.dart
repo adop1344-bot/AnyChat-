@@ -41,6 +41,23 @@ class Messages extends Table {
   TextColumn get model => text().nullable()();
   TextColumn get errorType => text().nullable()();
   TextColumn get errorDetails => text().nullable()();
+
+  /// JSON array of tool steps (SEARCH/OPEN/WIDGET) — schema v6.
+  TextColumn get toolSteps => text().nullable()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+@DataClassName('ChatWidgetRow')
+class ChatWidgets extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get chatId => integer()();
+
+  /// `counter` / `note` / `todo`.
+  TextColumn get type => text()();
+  TextColumn get title => text().withDefault(const Constant(''))();
+
+  /// JSON with widget-specific config.
+  TextColumn get config => text().withDefault(const Constant('{}'))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
@@ -59,7 +76,7 @@ class ProvidersConfig extends Table {
   TextColumn get format => text().withDefault(const Constant('openai'))();
 }
 
-@DriftDatabase(tables: [Chats, Messages, Branches, ProvidersConfig])
+@DriftDatabase(tables: [Chats, Messages, Branches, ProvidersConfig, ChatWidgets])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(driftDatabase(name: 'anychat'));
 
@@ -67,7 +84,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.memory() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -83,6 +100,10 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 5) {
             await m.addColumn(messages, messages.reasoning);
+          }
+          if (from < 6) {
+            await m.addColumn(messages, messages.toolSteps);
+            await m.createTable(chatWidgets);
           }
           if (from < 4) {
             await m.addColumn(providersConfig, providersConfig.name);

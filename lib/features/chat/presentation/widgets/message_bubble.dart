@@ -8,6 +8,7 @@ import '../../../../core/errors/error_localizer.dart';
 import '../../domain/models.dart';
 import '../../../../l10n/app_localizations.dart';
 import 'attachment_view.dart';
+import 'tool_steps_view.dart';
 import 'code_block.dart';
 
 /// Compact `‹ 2/2 ›` switcher between regenerations of the same message.
@@ -24,6 +25,7 @@ class MessageBubble extends StatelessWidget {
     required this.message,
     required this.streamingText,
     this.streamingReasoning = '',
+    this.toolSteps = const <ToolStep>[],
     required this.isStreaming,
     required this.isLast,
     required this.showRegenerate,
@@ -36,6 +38,7 @@ class MessageBubble extends StatelessWidget {
   final Message message;
   final String streamingText;
   final String streamingReasoning;
+  final List<ToolStep> toolSteps;
   final bool isStreaming;
   final bool isLast;
   final bool showRegenerate;
@@ -85,6 +88,7 @@ class MessageBubble extends StatelessWidget {
             ],
           ),
         ),
+      if (toolSteps.isNotEmpty) ToolStepsView(steps: toolSteps),
       if (reasoning.trim().isNotEmpty)
         _ThinkingBlock(reasoning: reasoning, live: isStreaming),
       if (isStreaming)

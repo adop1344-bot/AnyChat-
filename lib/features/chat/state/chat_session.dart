@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -11,6 +13,7 @@ import '../../../core/errors/debug_log.dart';
 import '../../../features/providers/data/provider_adapter.dart';
 import '../../settings/app_settings.dart';
 import '../../settings/state/settings_controller.dart';
+import '../data/widget_repository.dart';
 import '../domain/models.dart';
 
 part 'chat_session.g.dart';
@@ -28,6 +31,7 @@ class ChatSessionState {
     this.lastError,
     this.lastIssue,
     this.toolNotice = '',
+    this.streamToolSteps = const <ToolStep>[],
   });
 
   final bool isStreaming;
@@ -40,6 +44,8 @@ class ChatSessionState {
   final ChatIssue? lastIssue;
 
   final String toolNotice;
+
+  final List<ToolStep> streamToolSteps;
 
   bool get hasFailure => lastError != null || lastIssue != null;
 }
@@ -93,6 +99,47 @@ class ChatSession extends _$ChatSession {
         state.busy) {
       return;
     }
+
+    final command = RegExp(r'^/(\w+)\s*(.*)$').firstMatch(trimmed);
+    var forceWeb = false;
+    var endMode = false;
+    if (command != null) {
+      final name = command.group(1)!.toLowerCase();
+      final rest = command.group(2)!.trim();
+      switch (name) {
+        case 'stop':
+          stop();
+          return;
+        case 'help':
+          await _localReply(chatId, trimmed, _helpText());
+          return;
+        case 'widget':
+          if (rest.isEmpty) {
+            await _localReply(
+              chatId,
+              trimmed,
+              'Опиши, какой виджет создать, например:\n'
+                  '/widget счётчик выпитой воды\n'
+                  '/widget заметка со списком покупок\n'
+                  '/widget чек-лист дел на день',
+            );
+            return;
+          }
+        case 'search':
+          if (rest.isEmpty) {
+            await _localReply(
+              chatId,
+              trimmed,
+              'Укажи запрос: /search что искать',
+            );
+            return;
+          }
+          forceWeb = true;
+        case 'end':
+          endMode = true;
+      }
+    }
+
     state = const ChatSessionState();
 
     final session = await _openSession(chatId);
@@ -115,8 +162,41 @@ class ChatSession extends _$ChatSession {
     }
 
     final fresh = await repo.messagesInBranch(session.branchId);
-    await _generate(session: session, turns: _historyTurns(session, fresh));
+    await _generate(
+      session: session,
+      turns: _historyTurns(session, fresh),
+      forceWeb: forceWeb,
+      endMode: endMode,
+    );
   }
+
+  Future<void> _localReply(int chatId, String userText, String reply) async {
+    final session = await _openSession(chatId);
+    if (session == null) return;
+    final repo = ref.read(messageRepositoryProvider);
+    await repo.insertMessage(
+      chatId: chatId,
+      branchId: session.branchId,
+      role: 'user',
+      content: userText,
+    );
+    await repo.insertMessage(
+      chatId: chatId,
+      branchId: session.branchId,
+      role: 'assistant',
+      content: reply,
+      model: session.model,
+    );
+  }
+
+  static String _helpText() =>
+      'Команды:\n'
+      '/widget <описание> — создать виджет в этом чате (ИИ уточнит детали)\n'
+      '/search <запрос> — поиск в интернете для одного ответа\n'
+      '/end <задача> — автономный режим: ИИ работает, пока полностью не '
+      'завершит задачу\n'
+      '/stop — остановить генерацию\n'
+      '/help — эта справка';
 
   var _stopRequested = false;
 
@@ -377,6 +457,8 @@ class ChatSession extends _$ChatSession {
   Future<void> _generate({
     required _Session session,
     required List<ChatTurn> turns,
+    bool forceWeb = false,
+    bool endMode = false,
   }) async {
     if (turns.isEmpty) return;
     _stopRequested = false;
@@ -388,65 +470,242 @@ class ChatSession extends _$ChatSession {
       content: '',
       model: session.model,
     );
+    final webEnabled = session.settings.webSearch || forceWeb;
+    final widgetMode = turns
+        .where((ChatTurn t) => t.role == 'user')
+        .toList()
+        .reversed
+        .take(6)
+        .any((ChatTurn t) => t.content.trim().startsWith('/widget'));
     var webTurns = turns;
-    if (session.settings.webSearch) {
-      webTurns = _withWebHint(turns);
+    if (webEnabled) {
+      webTurns = _withWebHint(webTurns);
     }
+    if (widgetMode) {
+      webTurns = _withWidgetHint(webTurns);
+    }
+    if (endMode) {
+      webTurns = _withEndHint(webTurns);
+    }
+    const doneMarker = '[DONE]';
+    const maxToolRounds = 6;
+    const maxEndRounds = 8;
     var content = '';
     var reasoning = '';
     var rounds = 0;
+    var endRounds = 0;
+    final steps = <ToolStep>[];
     await StreamGuard.begin();
     try {
       while (true) {
-        content = await _streamAttempt(
-          session: session,
-          turns: webTurns,
-          assistantId: assistantId,
-          attempt: 0,
-          seedContent: content,
-          seedReasoning: reasoning,
-        );
-        if (!session.settings.webSearch || _stopRequested) break;
-        if (state.lastError != null) break;
-        final tool = WebToolCall.extract(content);
-        if (tool == null || rounds >= 3) break;
-        final visible = content.substring(0, tool.start).trimRight();
-        content = visible;
-        await repo.setContent(assistantId, visible);
-        state = ChatSessionState(
-          isStreaming: true,
-          streamingChatId: session.chat.id,
-          streamingMessageId: assistantId,
-          streamText: visible,
-          streamReasoning: reasoning,
-          toolNotice: tool.kind == 'OPEN'
-              ? '📖 Читаю страницу…'
-              : '🔍 Ищу: ${tool.argument}',
-        );
-        final result = await WebSearch.run(tool);
-        if (_stopRequested) break;
-        state = ChatSessionState(
-          isStreaming: true,
-          streamingChatId: session.chat.id,
-          streamingMessageId: assistantId,
-          streamText: visible,
-          streamReasoning: reasoning,
-        );
+        while (true) {
+          content = await _streamAttempt(
+            session: session,
+            turns: webTurns,
+            assistantId: assistantId,
+            attempt: 0,
+            seedContent: content,
+            seedReasoning: reasoning,
+          );
+          if (_stopRequested || state.lastError != null) break;
+          if (rounds >= maxToolRounds) break;
+          final tool = WebToolCall.extract(content);
+          if (tool == null) break;
+          final visible = content.substring(0, tool.start).trimRight();
+          content = visible;
+          await repo.setContent(assistantId, visible);
+
+          if (tool.kind == 'WIDGET') {
+            final summary = await _createWidget(session, tool.argument);
+            steps.add(
+              ToolStep(kind: 'WIDGET', argument: 'виджет', summary: summary),
+            );
+            await repo.setToolSteps(assistantId, steps);
+            state = ChatSessionState(
+              isStreaming: true,
+              streamingChatId: session.chat.id,
+              streamingMessageId: assistantId,
+              streamText: visible,
+              streamReasoning: reasoning,
+              streamToolSteps: steps,
+            );
+            webTurns = <ChatTurn>[
+              ...webTurns,
+              ChatTurn(role: 'assistant', content: visible),
+              ChatTurn(
+                role: 'user',
+                content: summary.startsWith('Виджет')
+                    ? 'Widget created OK. Кратко подтверди пользователю '
+                        'на его языке, не выводи строку WIDGET.'
+                    : 'Widget failed: $summary. Скажи об этом пользователю '
+                        'коротко на его языке.',
+              ),
+            ];
+            rounds++;
+            continue;
+          }
+
+          if (!webEnabled) {
+            steps.add(
+              ToolStep(
+                kind: tool.kind,
+                argument: tool.argument,
+                summary: 'инструменты выключены',
+              ),
+            );
+            await repo.setToolSteps(assistantId, steps);
+            webTurns = <ChatTurn>[
+              ...webTurns,
+              ChatTurn(role: 'assistant', content: visible),
+              ChatTurn(
+                role: 'user',
+                content: 'Web tools are disabled. Продолжай ответ без них, '
+                    'не выводи строки SEARCH/OPEN.',
+              ),
+            ];
+            rounds++;
+            continue;
+          }
+
+          state = ChatSessionState(
+            isStreaming: true,
+            streamingChatId: session.chat.id,
+            streamingMessageId: assistantId,
+            streamText: visible,
+            streamReasoning: reasoning,
+            streamToolSteps: steps,
+            toolNotice: tool.kind == 'OPEN'
+                ? '📖 Читаю страницу…'
+                : '🔍 Ищу: ${tool.argument}',
+          );
+          final result = await WebSearch.run(tool);
+          if (_stopRequested) break;
+          final oneLine = result.replaceAll('\n', ' ');
+          steps.add(
+            ToolStep(
+              kind: tool.kind,
+              argument: tool.argument,
+              summary: oneLine.length > 60
+                  ? '${oneLine.substring(0, 60)}…'
+                  : oneLine,
+            ),
+          );
+          await repo.setToolSteps(assistantId, steps);
+          state = ChatSessionState(
+            isStreaming: true,
+            streamingChatId: session.chat.id,
+            streamingMessageId: assistantId,
+            streamText: visible,
+            streamReasoning: reasoning,
+            streamToolSteps: steps,
+          );
+          webTurns = <ChatTurn>[
+            ...webTurns,
+            ChatTurn(role: 'assistant', content: visible),
+            ChatTurn(
+              role: 'user',
+              content: '$result\n\nИспользуй эти данные и продолжай ответ '
+                  'пользователю на его языке. Не повторяй уже написанное и не '
+                  'выводи служебные строки SEARCH/OPEN/WIDGET.',
+            ),
+          ];
+          rounds++;
+        }
+
+        if (!endMode || _stopRequested || state.lastError != null) break;
+        final markerIndex = content.indexOf(doneMarker);
+        if (markerIndex >= 0) {
+          content = content.substring(0, markerIndex).trimRight();
+          await repo.setContent(assistantId, content);
+          break;
+        }
+        if (endRounds >= maxEndRounds) break;
+        endRounds++;
         webTurns = <ChatTurn>[
           ...webTurns,
-          ChatTurn(role: 'assistant', content: visible),
+          ChatTurn(role: 'assistant', content: content),
           ChatTurn(
             role: 'user',
-            content: '$result\n\nИспользуй эти данные и продолжай ответ '
-                'пользователю на его языке. Не повторяй уже написанное и не '
-                'выводи служебные строки SEARCH/OPEN.',
+            content: 'Continue the task exactly from where you stopped, '
+                'do not repeat yourself. When the ENTIRE task is fully '
+                'complete, output $doneMarker on its own final line.',
           ),
         ];
-        rounds++;
       }
     } finally {
       await StreamGuard.end();
     }
+  }
+
+  Future<String> _createWidget(_Session session, String argument) async {
+    try {
+      final decoded = jsonDecode(argument);
+      if (decoded is Map<String, dynamic>) {
+        final type = (decoded['type'] ?? '').toString();
+        final title = (decoded['title'] ?? '').toString();
+        final cfg = decoded['config'];
+        final config =
+            cfg is Map<String, dynamic> ? cfg : <String, dynamic>{};
+        if (!ChatWidget.knownTypes.contains(type)) {
+          return 'Неизвестный тип виджета: $type';
+        }
+        await ref.read(widgetRepositoryProvider).insert(
+              chatId: session.chat.id,
+              type: type,
+              title: title,
+              config: config,
+            );
+        return 'Виджет «$title» создан';
+      }
+      return 'Некорректный JSON виджета';
+    } on FormatException {
+      return 'Некорректный JSON виджета';
+    }
+  }
+
+  List<ChatTurn> _withWidgetHint(List<ChatTurn> turns) {
+    const hint =
+        '\n\nWIDGET TOOL: the user is creating a chat widget. Types: '
+        '"counter" (config {"value":int=0,"step":int=1,"unit":string}), '
+        '"note" (config {"text":string}), "todo" (config '
+        '{"items":[{"text":string,"done":bool}]}). If the request is clear, '
+        'output ONE line: WIDGET: '
+        '{"type":"...","title":"short title","config":{...}} — nothing else '
+        'on that line, a short confirmation around it is welcome. If '
+        'something important is unclear, ask ONE short question in the '
+        'user\'s language instead.';
+    return _appendSystem(turns, hint);
+  }
+
+  List<ChatTurn> _withEndHint(List<ChatTurn> turns) {
+    final hint =
+        '\n\nTASK MODE (/end): the user gave you a task and wants you to '
+        'work autonomously until it is FULLY complete. After each part you '
+        'will be told to continue — keep going without repeating yourself. '
+        'When the entire task is finished, output $doneMarker on its own '
+        'final line.';
+    return _appendSystem(turns, hint);
+  }
+
+  List<ChatTurn> _appendSystem(List<ChatTurn> turns, String hint) {
+    final hasSystem = turns.any((ChatTurn t) => t.role == 'system');
+    if (!hasSystem) {
+      return <ChatTurn>[
+        ChatTurn(role: 'system', content: hint.trim()),
+        ...turns,
+      ];
+    }
+    return <ChatTurn>[
+      for (final ChatTurn t in turns)
+        if (t.role == 'system')
+          ChatTurn(
+            role: t.role,
+            content: t.content + hint,
+            attachments: t.attachments,
+          )
+        else
+          t,
+    ];
   }
 
   List<ChatTurn> _withWebHint(List<ChatTurn> turns) {
