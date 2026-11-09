@@ -23,7 +23,8 @@ class ChatWidgetStrip extends ConsumerWidget {
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
             itemCount: list.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            separatorBuilder: (BuildContext context, int index) =>
+                const SizedBox(width: 8),
             itemBuilder: (BuildContext ctx, int i) =>
                 _WidgetCard(widget: list[i]),
           ),

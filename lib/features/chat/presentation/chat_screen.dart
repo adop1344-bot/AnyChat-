@@ -117,7 +117,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       },
     );
 
-    final _mascot = _mascotState(
+    final mascotState = _mascotState(
       session.isStreaming,
       session.streamText,
       session.streamReasoning,
@@ -152,11 +152,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             builder: (BuildContext scaffoldContext) => SafeArea(
               child: Stack(
                 children: <Widget>[
-                  if (_mascot != null)
+                  if (mascotState != null)
                     Positioned(
                       right: 16,
                       bottom: 100,
-                      child: Mascot(state: _mascot!, size: 44),
+                      child: Mascot(state: mascotState!, size: 44),
                     ),
                   if (_showJump)
                     Positioned(
