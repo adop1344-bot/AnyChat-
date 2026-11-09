@@ -682,7 +682,7 @@ class ChatSession extends _$ChatSession {
         '\n\nTASK MODE (/end): the user gave you a task and wants you to '
         'work autonomously until it is FULLY complete. After each part you '
         'will be told to continue — keep going without repeating yourself. '
-        'When the entire task is finished, output $doneMarker on its own '
+        'When the entire task is finished, output [DONE] on its own '
         'final line.';
     return _appendSystem(turns, hint);
   }
