@@ -140,10 +140,48 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             builder: (BuildContext scaffoldContext) => SafeArea(
               child: Stack(
                 children: <Widget>[
+                  if (_showJump)
+                    Positioned(
+                      left: 20,
+                      bottom: 96,
+                      child: FloatingActionButton(
+                        mini: true,
+                        onPressed: () => _scroll.animateTo(
+                          0,
+                          duration: const Duration(milliseconds: 250),
+                          curve: Curves.easeOut,
+                        ),
+                        child: const Icon(Icons.arrow_downward),
+                      ),
+                    ),
                   Column(
                     children: <Widget>[
                       if (session.busy)
                         const LinearProgressIndicator(minHeight: 2),
+                      if (session.toolNotice.isNotEmpty)
+                        Container(
+                          width: double.infinity,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .secondaryContainer,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 6,
+                          ),
+                          child: Text(
+                            session.toolNotice,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSecondaryContainer,
+                                ),
+                          ),
+                        ),
                       const SizedBox(height: 56),
                       Expanded(
                         child: messagesAsync.when(
@@ -324,6 +362,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   ),
                 )
               : ListView.builder(
+                  controller: _scroll,
                   reverse: true,
                   padding: const EdgeInsets.only(top: 8, bottom: 8),
                   itemCount: reversed.length,
@@ -401,6 +440,28 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ),
       ],
     );
+  }
+
+  final ScrollController _scroll = ScrollController();
+  bool _showJump = false;
+
+  void _onScroll() {
+    final show = _scroll.hasClients && _scroll.offset > 600;
+    if (show != _showJump) {
+      setState(() => _showJump = show);
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _scroll.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
   }
 
   void _showContextStats(

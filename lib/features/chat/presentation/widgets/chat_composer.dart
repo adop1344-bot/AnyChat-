@@ -187,6 +187,57 @@ class _ChatComposerState extends ConsumerState<ChatComposer> {
     _focus.requestFocus();
   }
 
+  Future<void> _openReasoningSheet() async {
+    final controller = ref.read(settingsControllerProvider.notifier);
+    final current =
+        ref.read(settingsControllerProvider).value?.reasoningEffort ?? '';
+    final options = <(String, String)>[
+      ('', 'Авто'),
+      ('off', 'Выкл'),
+      ('low', 'Низкие'),
+      ('medium', 'Средние'),
+      ('high', 'Высокие'),
+      ('extreme', 'Экстрим'),
+    ];
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (BuildContext sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 4),
+              child: Text(
+                'Раздумья модели',
+                style: Theme.of(sheetContext).textTheme.titleMedium,
+              ),
+            ),
+            for (final (value, label) in options)
+              ListTile(
+                title: Text(label),
+                subtitle: value == ''
+                    ? const Text('Модель решает сама')
+                    : value == 'off'
+                        ? const Text('Не думать (где поддерживается)')
+                        : value == 'extreme'
+                            ? const Text('Максимальные размышления')
+                            : null,
+                trailing: current == value
+                    ? const Icon(Icons.check)
+                    : null,
+                onTap: () {
+                  controller.setReasoningEffort(value);
+                  Navigator.of(sheetContext).pop();
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsControllerProvider).when(
@@ -207,6 +258,8 @@ class _ChatComposerState extends ConsumerState<ChatComposer> {
       contextUsed: widget.contextUsed,
       contextLimit: widget.contextLimit,
       onContextTap: widget.onContextTap,
+      onReasoningTap: _openReasoningSheet,
+      reasoningLevel: settings.reasoningEffort,
     );
   }
 }

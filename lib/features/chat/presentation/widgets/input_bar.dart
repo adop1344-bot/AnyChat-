@@ -21,6 +21,8 @@ class InputBar extends StatefulWidget {
     this.contextUsed,
     this.contextLimit,
     this.onContextTap,
+    this.onReasoningTap,
+    this.reasoningLevel = '',
   });
 
   final TextEditingController controller;
@@ -35,6 +37,8 @@ class InputBar extends StatefulWidget {
   final int? contextUsed;
   final int? contextLimit;
   final VoidCallback? onContextTap;
+  final VoidCallback? onReasoningTap;
+  final String reasoningLevel;
 
   @override
   State<InputBar> createState() => _InputBarState();
@@ -42,6 +46,13 @@ class InputBar extends StatefulWidget {
 
 class _InputBarState extends State<InputBar> {
   bool _hasText = false;
+
+  Color? _lampColor(BuildContext context, String level) {
+    final scheme = Theme.of(context).colorScheme;
+    if (level == 'off') return scheme.outlineVariant;
+    if (level.isEmpty || level == 'auto') return scheme.onSurfaceVariant;
+    return scheme.primary;
+  }
 
   @override
   void initState() {
@@ -114,11 +125,35 @@ class _InputBarState extends State<InputBar> {
                     showContext ? 84 : 52,
                     12,
                   ),
-                  prefixIcon: IconButton(
-                    icon: const Icon(Icons.add),
-                    tooltip:
-                        l10n.attach,
-                    onPressed: canAttach ? widget.onAttach : null,
+                  prefixIcon: SizedBox(
+                    width: widget.onReasoningTap == null ? 48 : 96,
+                    child: Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: IconButton(
+                            icon: const Icon(Icons.add),
+                            tooltip: l10n.attach,
+                            onPressed: canAttach ? widget.onAttach : null,
+                          ),
+                        ),
+                        if (widget.onReasoningTap != null)
+                          Expanded(
+                            child: IconButton(
+                              icon: Icon(
+                                widget.reasoningLevel == 'off'
+                                    ? Icons.lightbulb_outline
+                                    : Icons.lightbulb,
+                              ),
+                              color: _lampColor(
+                                context,
+                                widget.reasoningLevel,
+                              ),
+                              tooltip: 'Раздумья',
+                              onPressed: widget.onReasoningTap,
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(28),

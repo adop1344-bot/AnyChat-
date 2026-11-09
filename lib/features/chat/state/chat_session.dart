@@ -538,29 +538,50 @@ class ChatSession extends _$ChatSession {
       state = ChatSessionState(lastError: error);
     }
 
-    Future<void> recover(ApiError error) async {
+    Future<String> recover(ApiError error) async {
       final interrupted =
           error.type == ApiErrorType.networkError ||
           error.type == ApiErrorType.timeout;
-      if (interrupted &&
-          attempt < 1 &&
-          contentBuffer.isEmpty &&
-          reasoningBuffer.isEmpty) {
+      final hasPartial =
+          contentBuffer.isNotEmpty || reasoningBuffer.isNotEmpty;
+      if (interrupted && attempt < 1 && !hasPartial) {
         await Future<void>.delayed(const Duration(seconds: 2));
         if (token.isCancelled) {
           await finish();
-          return;
+          return contentBuffer.toString();
         }
         handedOff = true;
-        await _streamAttempt(
+        return await _streamAttempt(
           session: session,
           turns: turns,
           assistantId: assistantId,
           attempt: attempt + 1,
         );
-        return;
+      }
+      if (interrupted && attempt < 1 && hasPartial) {
+        await Future<void>.delayed(const Duration(seconds: 2));
+        if (token.isCancelled) {
+          await finish();
+          return contentBuffer.toString();
+        }
+        handedOff = true;
+        return await _streamAttempt(
+          session: session,
+          turns: <ChatTurn>[
+            ...turns,
+            ChatTurn(
+              role: 'assistant',
+              content: contentBuffer.toString(),
+            ),
+          ],
+          assistantId: assistantId,
+          attempt: attempt + 1,
+          seedContent: contentBuffer.toString(),
+          seedReasoning: reasoningBuffer.toString(),
+        );
       }
       await recordFailure(error);
+      return contentBuffer.toString();
     }
 
     try {
@@ -590,18 +611,21 @@ class ChatSession extends _$ChatSession {
       reasoningBuffer.write(tail.reasoning);
       contentBuffer.write(tail.content);
       await finish();
+      return contentBuffer.toString();
     } on DioException catch (e) {
       if (e.type == DioExceptionType.cancel) {
         await finish();
+        return contentBuffer.toString();
       } else {
-        await recover(ApiError.fromDio(e, session.adapter.format));
+        return await recover(ApiError.fromDio(e, session.adapter.format));
       }
     } on ApiError catch (error) {
-      await recover(error);
+      return await recover(error);
     } catch (e) {
       await recordFailure(
         ApiError(type: ApiErrorType.unknown, raw: '$e', cause: e),
       );
+      return contentBuffer.toString();
     } finally {
       _token = null;
       if (!handedOff) {
