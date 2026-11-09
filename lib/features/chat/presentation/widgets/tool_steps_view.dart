@@ -51,6 +51,7 @@ class ToolStepsView extends StatelessWidget {
         'SEARCH' => Icons.search,
         'OPEN' => Icons.link,
         'WIDGET' => Icons.widgets_outlined,
+        'RUN' => Icons.terminal_outlined,
         _ => Icons.build_outlined,
       };
 
@@ -58,6 +59,7 @@ class ToolStepsView extends StatelessWidget {
         'SEARCH' => 'Поиск:',
         'OPEN' => 'Страница:',
         'WIDGET' => 'Виджет:',
+        'RUN' => 'Команда:',
         _ => kind,
       };
 }

@@ -59,6 +59,9 @@ class SettingsController extends _$SettingsController {
   Future<void> setWebSearch(bool value) =>
       _update((s) => s.copyWith(webSearch: value));
 
+  Future<void> setAgentShell(bool value) =>
+      _update((s) => s.copyWith(agentShell: value));
+
   Future<void> setPromptCaching(bool value) =>
       _update((s) => s.copyWith(promptCaching: value));
 

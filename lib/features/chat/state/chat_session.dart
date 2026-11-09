@@ -12,6 +12,7 @@ import '../../../core/storage/token_estimator.dart';
 import '../../../core/errors/debug_log.dart';
 import '../../../features/providers/data/provider_adapter.dart';
 import '../../settings/app_settings.dart';
+import '../../../core/tools/termux_shell.dart';
 import '../../settings/state/settings_controller.dart';
 import '../data/widget_repository.dart';
 import '../domain/models.dart';
@@ -487,6 +488,10 @@ class ChatSession extends _$ChatSession {
     if (endMode) {
       webTurns = _withEndHint(webTurns);
     }
+    final shellEnabled = session.settings.agentShell;
+    if (shellEnabled) {
+      webTurns = _withShellHint(webTurns);
+    }
     const doneMarker = '[DONE]';
     const maxToolRounds = 6;
     const maxEndRounds = 8;
@@ -539,6 +544,71 @@ class ChatSession extends _$ChatSession {
                         'на его языке, не выводи строку WIDGET.'
                     : 'Widget failed: $summary. Скажи об этом пользователю '
                         'коротко на его языке.',
+              ),
+            ];
+            rounds++;
+            continue;
+          }
+
+            rounds++;
+            continue;
+          }
+
+          if (tool.kind == 'RUN') {
+            if (!shellEnabled) {
+              steps.add(
+                ToolStep(
+                  kind: 'RUN',
+                  argument: tool.argument,
+                  summary: 'инструмент выключен',
+                ),
+              );
+              await repo.setToolSteps(assistantId, steps);
+              webTurns = <ChatTurn>[
+                ...webTurns,
+                ChatTurn(role: 'assistant', content: visible),
+                ChatTurn(
+                  role: 'user',
+                  content: 'Shell tool is disabled. Продолжай без команд, '
+                      'не выводи строку RUN.',
+                ),
+              ];
+              rounds++;
+              continue;
+            }
+            state = ChatSessionState(
+              isStreaming: true,
+              streamingChatId: session.chat.id,
+              streamingMessageId: assistantId,
+              streamText: visible,
+              streamReasoning: reasoning,
+              streamToolSteps: steps,
+              toolNotice: '⌨️ Команда: ${tool.argument}',
+            );
+            final result =
+                TermuxShell.trimResult(await TermuxShell.run(tool.argument));
+            if (_stopRequested) break;
+            final oneLine = result.replaceAll('\n', ' ');
+            steps.add(
+              ToolStep(
+                kind: 'RUN',
+                argument: tool.argument,
+                summary: oneLine.length > 60
+                    ? '${oneLine.substring(0, 60)}…'
+                    : oneLine,
+              ),
+            );
+            await repo.setToolSteps(assistantId, steps);
+            webTurns = <ChatTurn>[
+              ...webTurns,
+              ChatTurn(role: 'assistant', content: visible),
+              ChatTurn(
+                role: 'user',
+                content: 'SHELL RESULT:\n$result\n\n'
+                    'Используй результат и продолжай на языке пользователя. '
+                    'Если нужно, дай следующую команду RUN: — по одной за раз. '
+                    'Не выводи служебные строки SEARCH/OPEN/WIDGET/RUN '
+                    'в финальном ответе.',
               ),
             ];
             rounds++;
@@ -671,9 +741,21 @@ class ChatSession extends _$ChatSession {
         '{"items":[{"text":string,"done":bool}]}). If the request is clear, '
         'output ONE line: WIDGET: '
         '{"type":"...","title":"short title","config":{...}} — nothing else '
-        'on that line, a short confirmation around it is welcome. If '
+        'on that line, a short confirmation before the line is welcome. If '
         'something important is unclear, ask ONE short question in the '
         'user\'s language instead.';
+    return _appendSystem(turns, hint);
+  }
+
+  List<ChatTurn> _withShellHint(List<ChatTurn> turns) {
+    const hint =
+        '\n\nSHELL TOOL: you can run terminal commands on the user\'s '
+        'Android phone via Termux. To run a command output ONE line: '
+        'RUN: <command> and stop — the result will arrive as the next '
+        'message. Use it for files, text processing, system info, git, '
+        'network checks. Commands must be non-interactive and finish '
+        'within 2 minutes. Avoid destructive commands unless the user '
+        'explicitly asked for them.';
     return _appendSystem(turns, hint);
   }
 

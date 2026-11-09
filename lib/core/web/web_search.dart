@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 
 class WebToolCall {
@@ -8,7 +10,7 @@ class WebToolCall {
   const WebToolCall(this.kind, this.argument, this.start);
 
   static final RegExp _lineRe = RegExp(
-    r'^[ \t]*(SEARCH|OPEN):[ \t]*(\S.*?)?[ \t]*$',
+    r'^[ \t]*(SEARCH|OPEN|WIDGET|RUN):[ \t]*(\S.*?)?[ \t]*$',
     multiLine: true,
   );
 
@@ -19,7 +21,20 @@ class WebToolCall {
       if (arg.isEmpty) continue;
       last = WebToolCall(m.group(1)!, arg, m.start);
     }
-    return last;
+    if (last != null) return last;
+    final idx = content.lastIndexOf('WIDGET:');
+    if (idx < 0) return null;
+    final braceStart = content.indexOf('{', idx);
+    if (braceStart < 0) return null;
+    final braceEnd = content.lastIndexOf('}');
+    if (braceEnd <= braceStart) return null;
+    final block = content.substring(braceStart, braceEnd + 1);
+    try {
+      jsonDecode(block);
+    } on FormatException {
+      return null;
+    }
+    return WebToolCall('WIDGET', block, idx);
   }
 
   static String stripToolLines(String content) =>

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/tools/termux_shell.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -384,6 +385,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 value: settings.webSearch,
                 onChanged: (bool value) => _controller.setWebSearch(value),
+              ),
+              SwitchListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                title: const Text('Терминал (Termux)'),
+                subtitle: const Text(
+                  'Модель может выполнять команды на телефоне (RUN:)',
+                ),
+                value: settings.agentShell,
+                onChanged: (bool value) => _controller.setAgentShell(value),
+              ),
+              ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                title: const Text('Проверить Termux'),
+                subtitle: const Text('Запускает echo через RUN_COMMAND'),
+                trailing: const Icon(Icons.play_arrow),
+                onTap: () async {
+                  final messenger = ScaffoldMessenger.of(context);
+                  String msg;
+                  if (!await TermuxShell.available()) {
+                    msg = 'Termux не найден — установи Termux';
+                  } else {
+                    msg = (await TermuxShell.run('echo ok'))
+                        .replaceAll('\n', ' ');
+                    if (msg.length > 90) msg = msg.substring(0, 90);
+                  }
+                  messenger.showSnackBar(SnackBar(content: Text(msg)));
+                },
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),

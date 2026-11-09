@@ -14,6 +14,7 @@ class AppSettings {
     this.accentColor = 'system',
     this.reasoningEffort = '',
     this.webSearch = false,
+    this.agentShell = false,
     this.promptCaching = true,
     this.favoriteModels = const <String>[],
     this.selectedProviderId = '',
@@ -44,6 +45,8 @@ class AppSettings {
 
   final bool webSearch;
 
+  final bool agentShell;
+
   final bool promptCaching;
 
   final List<String> favoriteModels;
@@ -70,6 +73,7 @@ class AppSettings {
       accentColor: prefs.getString('accent_color') ?? 'system',
       reasoningEffort: prefs.getString('reasoning_effort') ?? '',
       webSearch: prefs.getBool('web_search') ?? false,
+      agentShell: prefs.getBool('agent_shell') ?? false,
       promptCaching: prefs.getBool('prompt_caching') ?? true,
       favoriteModels:
           prefs.getStringList('favorite_models') ?? const <String>[],
@@ -112,6 +116,7 @@ class AppSettings {
     String? accentColor,
     String? reasoningEffort,
     bool? webSearch,
+    bool? agentShell,
     bool? promptCaching,
     List<String>? favoriteModels,
     String? selectedProviderId,
@@ -140,6 +145,7 @@ class AppSettings {
       accentColor: accentColor ?? this.accentColor,
       reasoningEffort: reasoningEffort ?? this.reasoningEffort,
       webSearch: webSearch ?? this.webSearch,
+      agentShell: agentShell ?? this.agentShell,
       promptCaching: promptCaching ?? this.promptCaching,
       favoriteModels: favoriteModels ?? this.favoriteModels,
       selectedProviderId: selectedProviderId ?? this.selectedProviderId,
@@ -187,6 +193,7 @@ class AppSettings {
     await prefs.setString('accent_color', accentColor);
     await prefs.setString('reasoning_effort', reasoningEffort);
     await prefs.setBool('web_search', webSearch);
+    await prefs.setBool('agent_shell', agentShell);
     await prefs.setBool('prompt_caching', promptCaching);
     await prefs.setStringList('favorite_models', favoriteModels);
     await _setOrNull(
