@@ -46,10 +46,10 @@ class TermuxShell {
     final encoded = base64.encode(utf8.encode(command));
     final tmp = '/data/data/com.termux/files/home/.anychat-out-$id';
     final script = 'f=\'$tmp\'; '
-        'echo $encoded | base64 -d | bash >\'$f\' 2>&1; '
+        'echo $encoded | base64 -d | bash >\'\$f\' 2>&1; '
         'r=\${PIPESTATUS[1]}; '
-        'b=\$(head -c 65536 \'$f\' | base64 -w0); '
-        'rm -f \'$f\'; '
+        'b=\$(head -c 65536 \'\$f\' | base64 -w0); '
+        'rm -f \'\$f\'; '
         'am broadcast -a com.anychat.fork.SHELL_RESULT '
         '--es id $id --ei rc \$r --es out "\$b" >/dev/null 2>&1';
     var sent = false;
