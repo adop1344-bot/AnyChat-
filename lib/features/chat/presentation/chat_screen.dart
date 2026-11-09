@@ -156,7 +156,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     Positioned(
                       right: 16,
                       bottom: 100,
-                      child: Mascot(state: mascotState!, size: 44),
+                      child: Mascot(state: mascotState, size: 44),
                     ),
                   if (_showJump)
                     Positioned(
