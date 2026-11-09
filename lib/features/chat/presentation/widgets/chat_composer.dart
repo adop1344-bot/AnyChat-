@@ -181,7 +181,7 @@ class _ChatComposerState extends ConsumerState<ChatComposer> {
   }
 
   Future<void> _send() async {
-    final text = _controller.text;
+    final text = _eff.text;
     final attachments = List<ChatAttachment>.of(_pending);
     if (text.trim().isEmpty && attachments.isEmpty) return;
     _eff.clear();
