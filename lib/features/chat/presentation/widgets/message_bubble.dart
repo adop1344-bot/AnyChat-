@@ -63,6 +63,9 @@ class MessageBubble extends StatelessWidget {
         : ApiError.fromStored(storedError, details: message.errorDetails);
 
     final showCopy = !isStreaming && message.content.trim().isNotEmpty;
+    final wordCount = isUser || isStreaming || !showCopy
+        ? 0
+        : _countWords(message.content);
     final showBranch = onBranch != null && (isLast || branchPager != null);
     final hasActions = showCopy ||
         onEdit != null ||
@@ -134,6 +137,17 @@ class MessageBubble extends StatelessWidget {
             ),
           ],
         ),
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: TextButton.icon(
+            onPressed: () => _copyContent(
+              context,
+              _errorReport(l10n, error),
+            ),
+            icon: const Icon(Icons.bug_report_outlined, size: 16),
+            label: Text(l10n.copyError),
+          ),
+        ),
         if (showRegenerate)
           TextButton.icon(
             onPressed: onRegenerate,
@@ -196,6 +210,16 @@ class MessageBubble extends StatelessWidget {
                   children: <Widget>[
                     if (branchPager != null)
                       _BranchPager(pager: branchPager!),
+                    if (wordCount > 0)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 4),
+                        child: Text(
+                          l10n.wordCount(wordCount),
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
                     if (showCopy)
                       IconButton(
                         onPressed: () =>
@@ -240,6 +264,29 @@ class MessageBubble extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  static int _countWords(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return 0;
+    return trimmed.split(RegExp(r'\s+')).length;
+  }
+
+  static String _errorReport(AppLocalizations l10n, ApiError error) {
+    final buffer = StringBuffer()
+      ..writeln('AnyChat+ error')
+      ..writeln('type: ${error.type.name}');
+    if (error.statusCode != null) buffer.writeln('http: ${error.statusCode}');
+    if (error.details != null && error.details!.isNotEmpty) {
+      buffer.writeln('details: ${error.details}');
+    }
+    if (error.raw.isNotEmpty) {
+      final raw = error.raw.length > 2000
+          ? '${error.raw.substring(0, 2000)}…'
+          : error.raw;
+      buffer.writeln('raw: $raw');
+    }
+    return buffer.toString().trimRight();
   }
 
   Future<void> _copyContent(BuildContext context, String content) async {

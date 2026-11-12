@@ -239,5 +239,8 @@
   "errAgentNetwork": "Without a connection I can think but not answer.",
   "errAgentTimeout": "I waited on the provider and it never answered in time.",
   "errAgentServer": "Not your fault and not mine — something broke on the provider's end.",
-  "errAgentUnknown": "Honestly, I couldn't parse that reply. The raw text is in the log."
+  "errAgentUnknown": "Honestly, I couldn't parse that reply. The raw text is in the log.",
+  "copyError": "Copy error details",
+  "wordCount": "{count} words",
+  "@wordCount": {"placeholders": {"count": {"type": "int"}}}
 }
