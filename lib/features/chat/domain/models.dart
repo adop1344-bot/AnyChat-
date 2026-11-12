@@ -151,6 +151,10 @@ class Message {
     this.errorDetails,
     this.attachments = const <ChatAttachment>[],
     this.toolSteps = const <ToolStep>[],
+    this.tokensIn,
+    this.tokensOut,
+    this.durationMs,
+    this.tokensEstimated = false,
     required this.createdAt,
   });
 
@@ -166,6 +170,18 @@ class Message {
   /// Model reasoning (`<think>` or reasoning deltas), kept out of content.
   final String? reasoning;
   final String? model;
+
+  /// Prompt tokens (input) reported by the provider, or estimated.
+  final int? tokensIn;
+
+  /// Completion tokens (output) reported by the provider, or estimated.
+  final int? tokensOut;
+
+  /// Wall-clock time from request start to the last streamed chunk.
+  final int? durationMs;
+
+  /// True when the numbers come from the heuristic, not the provider.
+  final bool tokensEstimated;
 
   /// [ApiErrorType.name] of the last failure, if the reply failed.
   final String? errorType;
@@ -192,6 +208,10 @@ class Message {
         errorDetails: row.errorDetails,
         attachments: parseAttachments(row.attachments),
         toolSteps: ToolStep.decodeList(row.toolSteps),
+        tokensIn: row.tokensIn,
+        tokensOut: row.tokensOut,
+        durationMs: row.durationMs,
+        tokensEstimated: row.tokensEstimated,
         createdAt: row.createdAt,
       );
 

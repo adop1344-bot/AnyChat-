@@ -44,6 +44,12 @@ class Messages extends Table {
 
   /// JSON array of tool steps (SEARCH/OPEN/WIDGET) — schema v6.
   TextColumn get toolSteps => text().nullable()();
+
+  /// Per-reply metrics (schema v7). Null on user messages and old replies.
+  IntColumn get tokensIn => integer().nullable()();
+  IntColumn get tokensOut => integer().nullable()();
+  IntColumn get durationMs => integer().nullable()();
+  BoolColumn get tokensEstimated => boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
@@ -84,7 +90,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.memory() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -104,6 +110,12 @@ class AppDatabase extends _$AppDatabase {
           if (from < 6) {
             await m.addColumn(messages, messages.toolSteps);
             await m.createTable(chatWidgets);
+          }
+          if (from < 7) {
+            await m.addColumn(messages, messages.tokensIn);
+            await m.addColumn(messages, messages.tokensOut);
+            await m.addColumn(messages, messages.durationMs);
+            await m.addColumn(messages, messages.tokensEstimated);
           }
           if (from < 4) {
             await m.addColumn(providersConfig, providersConfig.name);

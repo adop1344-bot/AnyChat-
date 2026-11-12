@@ -850,7 +850,8 @@ class ChatSession extends _$ChatSession {
     final reasoningBuffer = StringBuffer(seedReasoning);
     final splitter = ThinkSplitter();
     var handedOff = false;
-    var lastPush = DateTime.now();
+    final startedAt = DateTime.now();
+    var lastPush = startedAt;
 
     Future<void> persist() async {
       await repo.setContent(assistantId, contentBuffer.toString());
@@ -947,6 +948,14 @@ class ChatSession extends _$ChatSession {
       final tail = splitter.close();
       reasoningBuffer.write(tail.reasoning);
       contentBuffer.write(tail.content);
+      await _saveMetrics(
+        session: session,
+        turns: turns,
+        assistantId: assistantId,
+        reply: contentBuffer.toString(),
+        reasoning: reasoningBuffer.toString(),
+        durationMs: DateTime.now().difference(startedAt).inMilliseconds,
+      );
       await finish();
       return contentBuffer.toString();
     } on DioException catch (e) {
@@ -968,6 +977,37 @@ class ChatSession extends _$ChatSession {
       if (!handedOff) {
         await _recordUsage(session, turns, contentBuffer.toString());
       }
+    }
+  }
+
+  /// Stores per-reply token counts and speed on the assistant message.
+  /// Provider-reported usage wins; otherwise the local heuristic is used and
+  /// flagged as estimated so the UI can mark it.
+  Future<void> _saveMetrics({
+    required _Session session,
+    required List<ChatTurn> turns,
+    required int assistantId,
+    required String reply,
+    required String reasoning,
+    required int durationMs,
+  }) async {
+    try {
+      final usage = session.adapter.lastUsage;
+      final sentTexts = <String>[for (final turn in turns) turn.content];
+      final tokensIn = usage?.inputTokens ??
+          estimateConversationTokens(sentTexts);
+      final tokensOut = usage?.outputTokens ??
+          estimateTokens(reply) + estimateTokens(reasoning);
+      await ref.read(messageRepositoryProvider).setMetrics(
+            assistantId,
+            tokensIn: tokensIn,
+            tokensOut: tokensOut,
+            durationMs: durationMs,
+            estimated: usage?.inputTokens == null ||
+                usage?.outputTokens == null,
+          );
+    } catch (_) {
+      // Metrics are decorative; never break a reply because of them.
     }
   }
 

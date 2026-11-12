@@ -56,6 +56,22 @@ class MessageRepository {
         .write(MessagesCompanion(content: Value(content)));
   }
 
+  Future<void> setMetrics(
+    int messageId, {
+    required int tokensIn,
+    required int tokensOut,
+    required int durationMs,
+    required bool estimated,
+  }) {
+    return (_db.update(_db.messages)..where((t) => t.id.equals(messageId)))
+        .write(MessagesCompanion(
+      tokensIn: Value(tokensIn),
+      tokensOut: Value(tokensOut),
+      durationMs: Value(durationMs),
+      tokensEstimated: Value(estimated),
+    ));
+  }
+
   Future<void> setReasoning(int messageId, String reasoning) {
     return (_db.update(_db.messages)..where((t) => t.id.equals(messageId)))
         .write(

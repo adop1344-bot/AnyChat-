@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/errors/api_error.dart';
 import '../../../../core/errors/error_localizer.dart';
+import '../../../../core/storage/token_estimator.dart';
 import '../../domain/models.dart';
 import '../../../../l10n/app_localizations.dart';
 import 'attachment_view.dart';
@@ -66,6 +67,7 @@ class MessageBubble extends StatelessWidget {
     final wordCount = isUser || isStreaming || !showCopy
         ? 0
         : _countWords(message.content);
+    final metricsLine = isUser || isStreaming ? null : _metricsLine(message);
     final showBranch = onBranch != null && (isLast || branchPager != null);
     final hasActions = showCopy ||
         onEdit != null ||
@@ -210,6 +212,16 @@ class MessageBubble extends StatelessWidget {
                   children: <Widget>[
                     if (branchPager != null)
                       _BranchPager(pager: branchPager!),
+                    if (metricsLine != null)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: Text(
+                          metricsLine,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
                     if (wordCount > 0)
                       Padding(
                         padding: const EdgeInsets.only(right: 4),
@@ -264,6 +276,24 @@ class MessageBubble extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// `↓1.2K ↑340 · 18.4 tok/s`. A leading `~` marks heuristic numbers.
+  static String? _metricsLine(Message message) {
+    final tin = message.tokensIn;
+    final tout = message.tokensOut;
+    if (tin == null && tout == null) return null;
+    final mark = message.tokensEstimated ? '~' : '';
+    final parts = <String>[
+      if (tin != null) '↓$mark${formatTokenCount(tin)}',
+      if (tout != null) '↑$mark${formatTokenCount(tout)}',
+    ];
+    final ms = message.durationMs;
+    if (tout != null && ms != null && ms > 0) {
+      final tps = tout * 1000 / ms;
+      parts.add('${tps.toStringAsFixed(1)} tok/s');
+    }
+    return parts.join(' · ');
   }
 
   static int _countWords(String text) {

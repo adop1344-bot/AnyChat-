@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/storage/token_estimator.dart';
+
 import '../../../../l10n/app_localizations.dart';
 import '../../../providers/domain/model_info.dart';
 import '../../domain/models.dart';
@@ -108,6 +110,19 @@ class _InputBarState extends State<InputBar> {
                       onRemove: remove == null ? null : () => remove(i),
                     ),
                 ],
+              ),
+            ),
+          if (widget.controller.text.trim().isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4, left: 12),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '~${formatTokenCount(estimateTokens(widget.controller.text))} tok',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                ),
               ),
             ),
           Stack(
