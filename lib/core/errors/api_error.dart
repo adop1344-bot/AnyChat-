@@ -48,8 +48,11 @@ class ApiError implements Exception {
   bool get isAuth => type == ApiErrorType.authError;
 
   @override
-  String toString() =>
-      'ApiError(type: $type, status: $statusCode, details: $details)';
+  String toString() {
+    final code = statusCode == null ? '' : ' (HTTP $statusCode)';
+    final why = details ?? (raw.isEmpty ? '' : raw);
+    return why.isEmpty ? '${type.name}$code' : '${type.name}$code: $why';
+  }
 
   /// Builds an error from an HTTP response body for the given wire format.
   factory ApiError.fromResponse({
