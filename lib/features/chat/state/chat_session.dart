@@ -748,10 +748,15 @@ class ChatSession extends _$ChatSession {
         '\n\nSHELL TOOL: you can run terminal commands on the user\'s '
         'Android phone via Termux. To run a command output ONE line: '
         'RUN: <command> and stop — the result will arrive as the next '
-        'message. Use it for files, text processing, system info, git, '
-        'network checks. Commands must be non-interactive and finish '
+        'message. Commands must be non-interactive and finish '
         'within 2 minutes. Avoid destructive commands unless the user '
-        'explicitly asked for them.';
+        'explicitly asked for them. '
+        'CRITICAL: output RUN: only when the user\'s request truly '
+        'needs a command (files, text processing, system info, git, '
+        'network checks). For greetings, small talk, questions and '
+        'advice NEVER output RUN: — just answer normally. Never invent '
+        'commands to demonstrate the tool. Always write your reply in '
+        'the language of the user\'s last message.';
     return _appendSystem(turns, hint);
   }
 
