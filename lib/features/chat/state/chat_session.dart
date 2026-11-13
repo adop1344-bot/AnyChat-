@@ -600,11 +600,10 @@ class ChatSession extends _$ChatSession {
               ChatTurn(role: 'assistant', content: visible),
               ChatTurn(
                 role: 'user',
-                content: 'SHELL RESULT:\n$result\n\n'
-                    'Используй результат и продолжай на языке пользователя. '
-                    'Если нужно, дай следующую команду RUN: — по одной за раз. '
-                    'Не выводи служебные строки SEARCH/OPEN/WIDGET/RUN '
-                    'в финальном ответе.',
+                content: 'SHELL RESULT (exit code in first line):\n'
+                    '$result\n\n'
+                    'Продолжай на языке пользователя; при необходимости '
+                    'следующая RUN: — по одной. Служебные строки не выводи.',
               ),
             ];
             rounds++;
@@ -731,32 +730,24 @@ class ChatSession extends _$ChatSession {
 
   List<ChatTurn> _withWidgetHint(List<ChatTurn> turns) {
     const hint =
-        '\n\nWIDGET TOOL: the user is creating a chat widget. Types: '
-        '"counter" (config {"value":int=0,"step":int=1,"unit":string}), '
-        '"note" (config {"text":string}), "todo" (config '
-        '{"items":[{"text":string,"done":bool}]}). If the request is clear, '
-        'output ONE line: WIDGET: '
-        '{"type":"...","title":"short title","config":{...}} — nothing else '
-        'on that line, a short confirmation before the line is welcome. If '
-        'something important is unclear, ask ONE short question in the '
-        'user\'s language instead.';
+        '\n\nWIDGET: output one line '
+        'WIDGET: {\"type\":\"counter|note|todo\",\"title\":\"…\",\"config\":{…}} '
+        '(counter {\"value\":int,\"step\":int,\"unit\":str}, note {\"text\":str}, '
+        'todo {\"items\":[{\"text\":str,\"done\":bool}]}). '
+        'One short question only if critical.';
     return _appendSystem(turns, hint);
   }
 
   List<ChatTurn> _withShellHint(List<ChatTurn> turns) {
     const hint =
-        '\n\nSHELL TOOL: you can run terminal commands on the user\'s '
-        'Android phone via Termux. To run a command output ONE line: '
-        'RUN: <command> and stop — the result will arrive as the next '
-        'message. Commands must be non-interactive and finish '
-        'within 2 minutes. Avoid destructive commands unless the user '
-        'explicitly asked for them. '
-        'CRITICAL: output RUN: only when the user\'s request truly '
-        'needs a command (files, text processing, system info, git, '
-        'network checks). For greetings, small talk, questions and '
-        'advice NEVER output RUN: — just answer normally. Never invent '
-        'commands to demonstrate the tool. Always write your reply in '
-        'the language of the user\'s last message.';
+        '\n\nSHELL: you may run a command on the user\'s phone via '
+        'Termux: output RUN: <command> and stop — the result with exit '
+        'code arrives as the next message. Multi-line commands and '
+        'heredocs are allowed; to save a file use '
+        'RUN: cat > /path <<\'EOF\' … EOF. Non-interactive, under 2 '
+        'minutes, nothing destructive unless asked. Use only when the '
+        'task truly needs it — never for greetings or chat. '
+        'Always reply in the user\'s language.';
     return _appendSystem(turns, hint);
   }
 
@@ -793,11 +784,9 @@ class ChatSession extends _$ChatSession {
 
   List<ChatTurn> _withWebHint(List<ChatTurn> turns) {
     const hint =
-        '\n\nWEB TOOL: You can use the web. To search, output a single line '
-        '"SEARCH: <query>" and STOP — the system will return results and you '
-        'continue. To read a web page, output "OPEN: <url>" and STOP. Use at '
-        'most 3 tool calls per answer, then give the final answer to the user '
-        'in their language.';
+        '\n\nWEB: to search output \"SEARCH: <query>\", to read a page '
+        '\"OPEN: <url>\" — then stop and wait. Max 3 tool calls per '
+        'answer, then answer in the user\'s language.';
     final hasSystem = turns.any((ChatTurn t) => t.role == 'system');
     if (!hasSystem) {
       return <ChatTurn>[

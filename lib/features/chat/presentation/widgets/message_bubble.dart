@@ -4,7 +4,6 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/errors/api_error.dart';
-import '../../../../core/errors/error_localizer.dart';
 import '../../../../core/storage/token_estimator.dart';
 import '../../domain/models.dart';
 import '../../../../l10n/app_localizations.dart';
@@ -131,10 +130,26 @@ class MessageBubble extends StatelessWidget {
             ),
             const SizedBox(width: 6),
             Flexible(
-              child: Text(
-                localizeApiError(l10n, error),
-                style:
-                    theme.textTheme.bodySmall?.copyWith(color: scheme.error),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(
+                    'HTTP ${error.statusCode ?? '-'} · ${error.type.name}',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: scheme.error,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  if (_rawErrorText(error).isNotEmpty)
+                    Text(
+                      _rawErrorText(error),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontFamily: 'monospace',
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                ],
               ),
             ),
           ],
@@ -276,6 +291,15 @@ class MessageBubble extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Raw provider payload, preferred over humanized text: users debugging
+  /// their own API keys want the actual response body.
+  static String _rawErrorText(ApiError error) {
+    var text = error.raw.trim();
+    if (text.isEmpty) text = error.details?.trim() ?? '';
+    if (text.length > 1000) text = '${text.substring(0, 1000)}…';
+    return text;
   }
 
   /// `↓1.2K ↑340 · 18.4 tok/s`. A leading `~` marks heuristic numbers.

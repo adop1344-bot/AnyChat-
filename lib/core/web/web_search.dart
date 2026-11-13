@@ -9,19 +9,39 @@ class WebToolCall {
 
   const WebToolCall(this.kind, this.argument, this.start);
 
-  static final RegExp _lineRe = RegExp(
-    r'^[ \t]*(SEARCH|OPEN|WIDGET|RUN):[ \t]*(\S.*?)?[ \t]*$',
-    multiLine: true,
+  static final RegExp _startLine = RegExp(
+    r'^[ \t]*(SEARCH|OPEN|WIDGET|RUN):[ \t]*(.*)$',
   );
 
   static WebToolCall? extract(String content) {
-    WebToolCall? last;
-    for (final m in _lineRe.allMatches(content)) {
-      final arg = (m.group(2) ?? '').trim();
-      if (arg.isEmpty) continue;
-      last = WebToolCall(m.group(1)!, arg, m.start);
+    // RUN blocks span multiple lines (heredoc-friendly): a block starts at
+    // `RUN:` and ends at the next tool line or end of message. The first
+    // RUN block wins so script+run pairs execute in order across rounds.
+    final lines = content.split('\n');
+    var offset = 0;
+    WebToolCall? lastSingle;
+    for (var i = 0; i < lines.length; i++) {
+      final m = _startLine.firstMatch(lines[i]);
+      if (m != null) {
+        final kind = m.group(1)!;
+        final arg = m.group(2)!.trim();
+        if (kind == 'RUN') {
+          final buf = StringBuffer(arg);
+          var j = i + 1;
+          while (j < lines.length && !_startLine.hasMatch(lines[j])) {
+            buf.write('\n');
+            buf.write(lines[j]);
+            j++;
+          }
+          final block = buf.toString().trim();
+          if (block.isNotEmpty) return WebToolCall('RUN', block, offset);
+        } else if (arg.isNotEmpty) {
+          lastSingle = WebToolCall(kind, arg, offset);
+        }
+      }
+      offset += lines[i].length + 1;
     }
-    if (last != null) return last;
+    if (lastSingle != null) return lastSingle;
     final idx = content.lastIndexOf('WIDGET:');
     if (idx < 0) return null;
     final braceStart = content.indexOf('{', idx);
@@ -37,8 +57,24 @@ class WebToolCall {
     return WebToolCall('WIDGET', block, idx);
   }
 
-  static String stripToolLines(String content) =>
-      content.split('\n').where((l) => !_lineRe.hasMatch(l)).join('\n');
+  static String stripToolLines(String content) {
+    final lines = content.split('\n');
+    final kept = <String>[];
+    var inRunBlock = false;
+    for (final line in lines) {
+      final m = _startLine.firstMatch(line);
+      if (inRunBlock) {
+        if (m == null) continue;
+        inRunBlock = false;
+      }
+      if (m != null) {
+        if (m.group(1) == 'RUN') inRunBlock = true;
+        continue;
+      }
+      kept.add(line);
+    }
+    return kept.join('\n');
+  }
 }
 
 class WebSearch {
