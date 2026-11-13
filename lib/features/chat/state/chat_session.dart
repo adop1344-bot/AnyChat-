@@ -731,9 +731,9 @@ class ChatSession extends _$ChatSession {
   List<ChatTurn> _withWidgetHint(List<ChatTurn> turns) {
     const hint =
         '\n\nWIDGET: output one line '
-        'WIDGET: {\"type\":\"counter|note|todo\",\"title\":\"…\",\"config\":{…}} '
-        '(counter {\"value\":int,\"step\":int,\"unit\":str}, note {\"text\":str}, '
-        'todo {\"items\":[{\"text\":str,\"done\":bool}]}). '
+        'WIDGET: {"type":"counter|note|todo","title":"…","config":{…}} '
+        '(counter {"value":int,"step":int,"unit":str}, note {"text":str}, '
+        'todo {"items":[{"text":str,"done":bool}]}). '
         'One short question only if critical.';
     return _appendSystem(turns, hint);
   }
@@ -784,8 +784,8 @@ class ChatSession extends _$ChatSession {
 
   List<ChatTurn> _withWebHint(List<ChatTurn> turns) {
     const hint =
-        '\n\nWEB: to search output \"SEARCH: <query>\", to read a page '
-        '\"OPEN: <url>\" — then stop and wait. Max 3 tool calls per '
+        '\n\nWEB: to search output "SEARCH: <query>", to read a page '
+        '"OPEN: <url>" — then stop and wait. Max 3 tool calls per '
         'answer, then answer in the user\'s language.';
     final hasSystem = turns.any((ChatTurn t) => t.role == 'system');
     if (!hasSystem) {
