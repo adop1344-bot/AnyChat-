@@ -236,6 +236,22 @@ class ApiError implements Exception {
         );
       default:
         final error = exception.error;
+        final text = '${exception.message ?? ''} $error';
+        // Proxies and mobile networks drop a long-lived stream without a
+        // status: dio reports it as `unknown` with the cause in the message.
+        final dropped = RegExp(
+          r'connection (closed|reset|terminated|aborted)|'
+          r'broken pipe|software caused connection abort|'
+          r'connection closed before full header',
+          caseSensitive: false,
+        ).hasMatch(text);
+        if (dropped) {
+          return ApiError(
+            type: ApiErrorType.networkError,
+            raw: text.trim(),
+            cause: exception,
+          );
+        }
         if (error is SocketException || error is HttpException) {
           return ApiError(
             type: ApiErrorType.networkError,

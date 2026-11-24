@@ -8,6 +8,16 @@ class MessageRepository {
 
   final AppDatabase _db;
 
+  /// All messages of a chat across every branch, oldest first. Used by the
+  /// Markdown export, which wants the real history rather than one branch.
+  Future<List<dm.Message>> listMessages(int chatId) async {
+    final query = _db.select(_db.messages)
+      ..where((t) => t.chatId.equals(chatId))
+      ..orderBy([(t) => OrderingTerm.asc(t.id)]);
+    final rows = await query.get();
+    return rows.map(dm.Message.fromRow).toList();
+  }
+
   Stream<List<dm.Message>> watchMessages(int chatId) {
     final query = _db.select(_db.messages)
       ..where((t) => t.chatId.equals(chatId))

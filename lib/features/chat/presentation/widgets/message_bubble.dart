@@ -4,6 +4,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/errors/api_error.dart';
+import '../../../../core/errors/error_localizer.dart';
 import '../../../../core/storage/token_estimator.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/ui/atoms.dart';
@@ -314,7 +315,13 @@ class _ErrorBlock extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final raw = MessageBubble._rawErrorText(error);
+    // The provider's own words first: it is what the person needs to act on.
+    final raw = _providerText(error);
+    final hint = localizeApiError(l10n, error);
+    final showHint = raw.isEmpty || !hint.toLowerCase().contains(
+          raw.toLowerCase().substring(0, raw.length.clamp(0, 24)),
+        );
+
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(top: AppSpace.x2),
@@ -325,9 +332,9 @@ class _ErrorBlock extends StatelessWidget {
         AppSpace.x2,
       ),
       decoration: BoxDecoration(
-        color: scheme.error.withValues(alpha: 0.06),
+        color: scheme.error.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(AppRadius.control),
-        border: Border.all(color: scheme.error.withValues(alpha: 0.24)),
+        border: Border.all(color: scheme.error.withValues(alpha: 0.22)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -338,7 +345,9 @@ class _ErrorBlock extends StatelessWidget {
               StatusDot(color: scheme.error, size: 5),
               const SizedBox(width: AppSpace.x2),
               Figure(
-                'HTTP ${error.statusCode ?? '-'} · ${error.type.name}',
+                error.statusCode == null
+                    ? error.type.name
+                    : 'HTTP ${error.statusCode} · ${error.type.name}',
                 size: 11,
                 weight: FontWeight.w500,
                 color: scheme.error,
@@ -347,13 +356,19 @@ class _ErrorBlock extends StatelessWidget {
           ),
           if (raw.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.only(top: AppSpace.x1),
-              child: Text(
+              padding: const EdgeInsets.only(top: AppSpace.x2),
+              child: SelectableText(
                 raw,
-                maxLines: 4,
-                overflow: TextOverflow.ellipsis,
-                style: AppType.figure(
-                  11,
+                maxLines: 8,
+                style: AppType.figure(11.5, height: 1.5),
+              ),
+            ),
+          if (showHint)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpace.x2),
+              child: Text(
+                hint,
+                style: theme.textTheme.bodySmall?.copyWith(
                   color: scheme.onSurfaceVariant,
                 ),
               ),
@@ -382,6 +397,22 @@ class _ErrorBlock extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// The provider's own message, unwrapped from JSON/HTML envelopes.
+  static String _providerText(ApiError error) {
+    final String source = (error.details?.trim().isNotEmpty ?? false)
+        ? error.details!.trim()
+        : error.raw.trim();
+    if (source.isEmpty) return '';
+    var text = source.replaceAll(RegExp(r'<[^>]*>'), ' ');
+    text = text.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (text.startsWith('{') || text.startsWith('[')) {
+      final quoted = RegExp(r'"message"\s*:\s*"([^"]+)"').firstMatch(text);
+      if (quoted != null) text = quoted.group(1)!;
+    }
+    if (text.length > 600) text = '${text.substring(0, 600)}…';
+    return text;
   }
 }
 

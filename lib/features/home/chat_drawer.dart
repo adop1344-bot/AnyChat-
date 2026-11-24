@@ -1,3 +1,7 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,15 +14,31 @@ import '../chat/domain/models.dart';
 import '../chat/state/chat_providers.dart';
 import '../chat/state/chat_session.dart';
 import '../chat/state/current_chat.dart';
+import 'pinned_chats.dart';
 
-class ChatDrawer extends ConsumerWidget {
+class ChatDrawer extends ConsumerStatefulWidget {
   const ChatDrawer({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ChatDrawer> createState() => _ChatDrawerState();
+}
+
+class _ChatDrawerState extends ConsumerState<ChatDrawer> {
+  final TextEditingController _searchController = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final chatsAsync = ref.watch(chatListProvider);
+    final List<int> pinned = ref.watch(pinnedChatsProvider).value ?? const <int>[];
     final currentId = ref.watch(currentChatProvider).when(
           data: (int? value) => value,
           loading: () => null,
@@ -54,6 +74,57 @@ class ChatDrawer extends ConsumerWidget {
                 ),
               ),
             ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpace.x3,
+                AppSpace.x2,
+                AppSpace.x3,
+                AppSpace.x1,
+              ),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (String value) =>
+                    setState(() => _query = value.trim().toLowerCase()),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface,
+                ),
+                decoration: InputDecoration(
+                  isDense: true,
+                  hintText: l10n.searchChats,
+                  hintStyle: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    size: 16,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  prefixIconConstraints: const BoxConstraints(
+                    minWidth: 34,
+                    minHeight: 34,
+                  ),
+                  fillColor: theme.colorScheme.surfaceContainerLow,
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: AppSpace.x2,
+                    horizontal: AppSpace.x2,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.control),
+                    borderSide:
+                        BorderSide(color: theme.colorScheme.outlineVariant),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.control),
+                    borderSide:
+                        BorderSide(color: theme.colorScheme.outlineVariant),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.control),
+                    borderSide: BorderSide(color: theme.colorScheme.primary),
+                  ),
+                ),
+              ),
+            ),
             const Hairline(),
             Expanded(
               child: chatsAsync.when(
@@ -66,7 +137,18 @@ class ChatDrawer extends ConsumerWidget {
                 ),
                 error: (Object error, StackTrace stack) =>
                     Center(child: Text(l10n.errUnknown('$error'))),
-                data: (List<Chat> chats) {
+                data: (List<Chat> allChats) {
+                  final List<Chat> filtered = _query.isEmpty
+                      ? allChats
+                      : allChats
+                          .where((Chat c) =>
+                              c.title.toLowerCase().contains(_query))
+                          .toList();
+                  // Pinned first, everything else in its natural order.
+                  final List<Chat> chats = <Chat>[
+                    ...filtered.where((Chat c) => pinned.contains(c.id)),
+                    ...filtered.where((Chat c) => !pinned.contains(c.id)),
+                  ];
                   if (chats.isEmpty) {
                     return Center(
                       child: Padding(
@@ -102,6 +184,7 @@ class ChatDrawer extends ConsumerWidget {
                             return _ChatRow(
                               chat: chat,
                               selected: chat.id == currentId,
+                              pinned: pinned.contains(chat.id),
                               onTap: () => _openChat(context, ref, chat.id),
                               onAction: (String value) {
                                 switch (value) {
@@ -111,6 +194,12 @@ class ChatDrawer extends ConsumerWidget {
                                     _summarizeChat(context, ref, l10n, chat);
                                   case 'prompt':
                                     _chatSystemPrompt(context, ref, chat);
+                                  case 'export':
+                                    _exportChat(context, ref, chat);
+                                  case 'pin':
+                                    ref
+                                        .read(pinnedChatsProvider.notifier)
+                                        .toggle(chat.id);
                                   case 'delete':
                                     _deleteChat(
                                       context,
@@ -288,6 +377,40 @@ class ChatDrawer extends ConsumerWidget {
     await ref.read(chatRepositoryProvider).setSystemPrompt(chat.id, result);
   }
 
+  /// Saves the whole conversation as Markdown, ready to paste anywhere.
+  Future<void> _exportChat(
+    BuildContext context,
+    WidgetRef ref,
+    Chat chat,
+  ) async {
+    final List<Message> messages =
+        await ref.read(messageRepositoryProvider).listMessages(chat.id);
+    final StringBuffer out = StringBuffer()
+      ..writeln('# ${chat.title}')
+      ..writeln()
+      ..writeln('_${chat.createdAt.toIso8601String().split('T').first}_')
+      ..writeln();
+    for (final Message message in messages) {
+      final String who = message.role == 'user' ? 'You' : message.model ?? 'Assistant';
+      out.writeln('## $who');
+      out.writeln();
+      out.writeln(message.content.trim());
+      out.writeln();
+    }
+    final String name = chat.title
+        .replaceAll(RegExp(r'[^\wа-яА-ЯёЁ -]'), '')
+        .trim()
+        .replaceAll(' ', '-');
+    final Uri? uri = await FilePicker.saveFile(
+      fileName: '${name.isEmpty ? 'chat' : name}.md',
+      bytes: Uint8List.fromList(utf8.encode(out.toString())),
+    );
+    if (!context.mounted || uri == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(AppLocalizations.of(context).exportDone)),
+    );
+  }
+
   Future<void> _deleteChat(
     BuildContext context,
     WidgetRef ref,
@@ -332,12 +455,14 @@ class _ChatRow extends StatelessWidget {
   const _ChatRow({
     required this.chat,
     required this.selected,
+    required this.pinned,
     required this.onTap,
     required this.onAction,
   });
 
   final Chat chat;
   final bool selected;
+  final bool pinned;
   final VoidCallback onTap;
   final ValueChanged<String> onAction;
 
@@ -375,6 +500,14 @@ class _ChatRow extends StatelessWidget {
                       : null,
                 ),
                 const SizedBox(width: AppSpace.x2),
+                if (pinned) ...<Widget>[
+                  Icon(
+                    Icons.push_pin,
+                    size: 12,
+                    color: scheme.onSurfaceVariant.withValues(alpha: 0.7),
+                  ),
+                  const SizedBox(width: 6),
+                ],
                 Expanded(
                   child: Text(
                     chat.title,
@@ -410,6 +543,18 @@ class _ChatRow extends StatelessWidget {
                       child: Text(
                         AppLocalizations.of(menuContext).systemPromptLabel,
                       ),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'pin',
+                      child: Text(
+                        pinned
+                            ? AppLocalizations.of(menuContext).unpinChat
+                            : AppLocalizations.of(menuContext).pinChat,
+                      ),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'export',
+                      child: Text(AppLocalizations.of(menuContext).exportChat),
                     ),
                     PopupMenuItem<String>(
                       value: 'delete',

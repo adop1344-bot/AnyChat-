@@ -240,5 +240,10 @@
         "type": "int"
       }
     }
-  }
+  },
+  "searchChats": "Поиск по чатам",
+  "exportChat": "Экспорт в Markdown",
+  "exportDone": "Диалог сохранён",
+  "pinChat": "Закрепить",
+  "unpinChat": "Открепить"
 }

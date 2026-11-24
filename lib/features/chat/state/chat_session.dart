@@ -51,6 +51,11 @@ class ChatSessionState {
   bool get hasFailure => lastError != null || lastIssue != null;
 }
 
+/// How many times a dropped stream is resumed before the error is shown.
+/// Mobile networks and reverse proxies cut idle streams; resuming keeps the
+/// answer instead of losing it.
+const int _maxRetries = 3;
+
 class _Session {
   const _Session({
     required this.chat,
@@ -876,8 +881,8 @@ class ChatSession extends _$ChatSession {
           error.type == ApiErrorType.timeout;
       final hasPartial =
           contentBuffer.isNotEmpty || reasoningBuffer.isNotEmpty;
-      if (interrupted && attempt < 1 && !hasPartial) {
-        await Future<void>.delayed(const Duration(seconds: 2));
+      if (interrupted && attempt < _maxRetries && !hasPartial) {
+        await Future<void>.delayed(Duration(milliseconds: 1200 * (attempt + 1)));
         if (token.isCancelled) {
           await finish();
           return contentBuffer.toString();
@@ -890,8 +895,8 @@ class ChatSession extends _$ChatSession {
           attempt: attempt + 1,
         );
       }
-      if (interrupted && attempt < 1 && hasPartial) {
-        await Future<void>.delayed(const Duration(seconds: 2));
+      if (interrupted && attempt < _maxRetries && hasPartial) {
+        await Future<void>.delayed(Duration(milliseconds: 1200 * (attempt + 1)));
         if (token.isCancelled) {
           await finish();
           return contentBuffer.toString();

@@ -18,6 +18,7 @@ import 'widgets/command_palette.dart';
 import 'widgets/context_circle.dart';
 import 'widgets/menu_glyph.dart';
 import 'widgets/message_bubble.dart';
+import 'widgets/model_picker_sheet.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key, required this.chatId});
@@ -284,6 +285,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           used: usage.used,
           limit: usage.limit,
           approximate: usage.approximate,
+          onModelTap: () => ModelPickerSheet.show(context),
           onTap: () => _showContextStats(
             l10n,
             chat,
@@ -461,12 +463,38 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 _statRow(dl.statInput, formatTokenCount(chat.usageInput)),
                 _statRow(dl.statOutput, formatTokenCount(chat.usageOutput)),
                 _statRow(dl.statThinking, formatTokenCount(chat.usageThinking)),
+                if (_costLine(chat) != null) ...<Widget>[
+                  const SizedBox(height: AppSpace.x2),
+                  const Hairline(),
+                  const SizedBox(height: AppSpace.x2),
+                  _statRow('Стоимость чата', _costLine(chat)!),
+                ],
               ],
             ),
           ),
         );
       },
     );
+  }
+
+  /// Sum of the provider-reported tokens at the model's price, when both are
+  /// known. Nothing is invented: no price set means no line.
+  String? _costLine(Chat chat) {
+    final AppSettings settings = ref.read(settingsControllerProvider).when(
+          data: (AppSettings value) => value,
+          loading: () => const AppSettings(),
+          error: (Object error, StackTrace stack) => const AppSettings(),
+        );
+    final double? inPrice = settings.modelInputPricePerM;
+    final double? outPrice = settings.modelOutputPricePerM;
+    if (inPrice == null && outPrice == null) return null;
+    final double input = chat.usageInput / 1000000 * (inPrice ?? 0);
+    final double output = chat.usageOutput / 1000000 * (outPrice ?? 0);
+    final double total = input + output;
+    if (total <= 0) return null;
+    return total < 0.01
+        ? '< \$0.01'
+        : '\$${total.toStringAsFixed(2)}';
   }
 
   Widget _statRow(String label, String value) {
@@ -565,12 +593,14 @@ class _ContextStrip extends ConsumerWidget {
     required this.limit,
     required this.approximate,
     required this.onTap,
+    required this.onModelTap,
   });
 
   final int used;
   final int limit;
   final bool approximate;
   final VoidCallback onTap;
+  final VoidCallback onModelTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -585,43 +615,68 @@ class _ContextStrip extends ConsumerWidget {
         );
     final modelLabel = settings.selectedModelId ?? '—';
 
-    return Material(
-      color: theme.colorScheme.surface,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          height: 34,
-          padding: const EdgeInsets.symmetric(horizontal: AppSpace.x4),
-          decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(color: theme.colorScheme.outlineVariant),
-            ),
-          ),
-          child: Row(
-            children: <Widget>[
-              Meter(ratio: ratio, width: 48, height: 3, color: status),
-              const SizedBox(width: AppSpace.x2),
-              Figure(
-                '$mark${formatTokenCount(used)} / ${formatTokenCount(limit)}',
-                size: 11,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-              const Spacer(),
-              Flexible(
-                child: Text(
-                  modelLabel,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.right,
-                  style: AppType.figure(
-                    11,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
+    return Container(
+      height: 34,
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        border: Border(
+          bottom: BorderSide(color: theme.colorScheme.outlineVariant),
+        ),
+      ),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: InkWell(
+              onTap: onTap,
+              child: Padding(
+                padding: const EdgeInsets.only(left: AppSpace.x4),
+                child: Row(
+                  children: <Widget>[
+                    Meter(ratio: ratio, width: 44, height: 3, color: status),
+                    const SizedBox(width: AppSpace.x2),
+                    Figure(
+                      '$mark${formatTokenCount(used)} / ${formatTokenCount(limit)}',
+                      size: 11,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
-        ),
+          const SizedBox(width: AppSpace.x2),
+          Expanded(
+            child: InkWell(
+              onTap: onModelTap,
+              child: Padding(
+                padding: const EdgeInsets.only(right: AppSpace.x4),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: <Widget>[
+                    Flexible(
+                      child: Text(
+                        modelLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppType.figure(
+                          11,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.unfold_more,
+                      size: 13,
+                      color: theme.colorScheme.onSurfaceVariant
+                          .withValues(alpha: 0.7),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
