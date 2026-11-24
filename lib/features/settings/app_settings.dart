@@ -16,6 +16,7 @@ class AppSettings {
     this.webSearch = false,
     this.agentShell = false,
     this.promptCaching = true,
+    this.keepAlive = true,
     this.favoriteModels = const <String>[],
     this.selectedProviderId = '',
     this.selectedModelId,
@@ -49,6 +50,10 @@ class AppSettings {
 
   final bool promptCaching;
 
+  /// Keep a foreground notification while a reply streams, so Android does
+  /// not kill the app mid-generation.
+  final bool keepAlive;
+
   final List<String> favoriteModels;
   final String selectedProviderId;
   final String? selectedModelId;
@@ -75,6 +80,7 @@ class AppSettings {
       webSearch: prefs.getBool('web_search') ?? false,
       agentShell: prefs.getBool('agent_shell') ?? false,
       promptCaching: prefs.getBool('prompt_caching') ?? true,
+      keepAlive: prefs.getBool('keep_alive') ?? true,
       favoriteModels:
           prefs.getStringList('favorite_models') ?? const <String>[],
       selectedProviderId: prefs.getString('selected_provider') ?? '',
@@ -118,6 +124,7 @@ class AppSettings {
     bool? webSearch,
     bool? agentShell,
     bool? promptCaching,
+    bool? keepAlive,
     List<String>? favoriteModels,
     String? selectedProviderId,
     Object? selectedModelId = _unspecified,
@@ -147,6 +154,7 @@ class AppSettings {
       webSearch: webSearch ?? this.webSearch,
       agentShell: agentShell ?? this.agentShell,
       promptCaching: promptCaching ?? this.promptCaching,
+      keepAlive: keepAlive ?? this.keepAlive,
       favoriteModels: favoriteModels ?? this.favoriteModels,
       selectedProviderId: selectedProviderId ?? this.selectedProviderId,
       selectedModelId: identical(selectedModelId, _unspecified)
@@ -195,6 +203,7 @@ class AppSettings {
     await prefs.setBool('web_search', webSearch);
     await prefs.setBool('agent_shell', agentShell);
     await prefs.setBool('prompt_caching', promptCaching);
+    await prefs.setBool('keep_alive', keepAlive);
     await prefs.setStringList('favorite_models', favoriteModels);
     await _setOrNull(
       prefs,

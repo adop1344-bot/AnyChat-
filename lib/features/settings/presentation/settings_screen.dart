@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
-
-import '../../../core/tools/termux_shell.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/errors/debug_log.dart';
+import '../../../core/storage/token_estimator.dart';
 import '../../../core/theme/accent_colors.dart';
+import '../../../core/theme/app_tokens.dart';
+import '../../../core/tools/termux_shell.dart';
+import '../../../core/ui/atoms.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../models/presentation/models_screen.dart';
 import '../../providers/domain/custom_provider.dart';
@@ -14,8 +16,6 @@ import '../../providers/presentation/providers_screen.dart';
 import '../../providers/state/providers_state.dart';
 import '../app_settings.dart';
 import '../state/settings_controller.dart';
-import '../../../core/theme/app_tokens.dart';
-import '../../../core/ui/atoms.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -76,29 +76,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _controller.setTimeoutSeconds(clamped);
   }
 
-  String _accentLabel(AppLocalizations l10n, String key) {
-    switch (key) {
-      case 'black':
-        return l10n.accentBlack;
-      case 'blue':
-        return l10n.accentBlue;
-      case 'lightBlue':
-        return l10n.accentLightBlue;
-      case 'green':
-        return l10n.accentGreen;
-      case 'pink':
-        return l10n.accentPink;
-      case 'red':
-        return l10n.accentRed;
-      case 'orange':
-        return l10n.accentOrange;
-      case 'purple':
-        return l10n.accentPurple;
-      default:
-        return key;
-    }
-  }
-
   void _onContextLimitChanged(String value) {
     final raw = value.trim();
     if (raw.isEmpty) {
@@ -123,6 +100,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
+  String _accentLabel(AppLocalizations l10n, String key) {
+    switch (key) {
+      case 'black':
+        return l10n.accentBlack;
+      case 'blue':
+        return l10n.accentBlue;
+      case 'lightBlue':
+        return l10n.accentLightBlue;
+      case 'green':
+        return l10n.accentGreen;
+      case 'pink':
+        return l10n.accentPink;
+      case 'red':
+        return l10n.accentRed;
+      case 'orange':
+        return l10n.accentOrange;
+      case 'purple':
+        return l10n.accentPurple;
+      default:
+        return key;
+    }
+  }
+
   Future<void> _showDebugLog() async {
     await showDialog<void>(
       context: context,
@@ -143,16 +143,30 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         itemCount: reversed.length,
                         itemBuilder: (BuildContext itemContext, int index) {
                           final entry = reversed[index];
-                          return ListTile(
-                            dense: true,
-                            title: Text(
-                              entry.raw,
-                              maxLines: 6,
-                              overflow: TextOverflow.ellipsis,
+                          return Padding(
+                            padding: const EdgeInsets.only(
+                              bottom: AppSpace.x3,
                             ),
-                            subtitle: Text(
-                              DateFormat('dd.MM.yyyy HH:mm:ss')
-                                  .format(entry.time),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Text(
+                                  DateFormat('dd.MM HH:mm:ss')
+                                      .format(entry.time),
+                                  style: AppType.figure(
+                                    10.5,
+                                    color: Theme.of(ctx)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
+                                ),
+                                Text(
+                                  entry.raw,
+                                  maxLines: 6,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppType.figure(11),
+                                ),
+                              ],
                             ),
                           );
                         },
@@ -165,51 +179,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 FilledButton(
                   onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: Text(l10n.cancel),
+                  child: Text(l10n.closeButton),
                 ),
               ],
             );
           },
         );
       },
-    );
-  }
-
-  Widget _accentSwatch({
-    required String key,
-    required String label,
-    required Color? color,
-    required bool selected,
-  }) {
-    final theme = Theme.of(context);
-    return Tooltip(
-      message: label,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppRadius.control),
-        onTap: () => _controller.setAccentColor(key),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: color ?? theme.colorScheme.surfaceContainerHighest,
-            border: Border.all(
-              color: selected
-                  ? theme.colorScheme.primary
-                  : theme.colorScheme.outlineVariant,
-              width: selected ? 3 : 1,
-            ),
-          ),
-          child: color == null
-              ? Icon(
-                  Icons.auto_awesome,
-                  size: 20,
-                  color: theme.colorScheme.primary,
-                )
-              : null,
-        ),
-      ),
     );
   }
 
@@ -241,168 +217,105 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (efforts.isEmpty && isReasoningModel(settings.selectedModelId ?? '')) {
       efforts = const <String>['low', 'medium', 'high'];
     }
-    final effortValue = efforts.contains(settings.reasoningEffort)
-        ? settings.reasoningEffort
-        : '';
+    final effortValue =
+        efforts.contains(settings.reasoningEffort) ? settings.reasoningEffort : '';
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.settingsTitle)),
       body: ListView(
         padding: const EdgeInsets.only(bottom: AppSpace.x10),
         children: <Widget>[
-          _section(
-            context,
-            l10n.providerSection,
-            <Widget>[
-              ListTile(
-                title: Text(l10n.providersTitle),
-                subtitle: Text(provider?.name ?? l10n.errNoProvider),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (BuildContext routeContext) =>
-                        const ProvidersScreen(),
-                  ),
-                ),
+          _ConnectionCard(
+            providerName: provider?.name ?? l10n.errNoProvider,
+            format: provider?.format.name ?? '—',
+            modelId: settings.selectedModelId ?? l10n.modelNotSelected,
+            contextWindow: settings.modelContextWindow,
+            onProviders: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (BuildContext routeContext) => const ProvidersScreen(),
+              ),
+            ),
+            onModels: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (BuildContext routeContext) => const ModelsScreen(),
+              ),
+            ),
+          ),
+          _Group(
+            label: l10n.generateSection,
+            children: <Widget>[
+              _SwitchRow(
+                title: 'Уведомление при генерации',
+                hint: 'Android не выгружает приложение, пока идёт ответ',
+                value: settings.keepAlive,
+                onChanged: (bool value) => _controller.setKeepAlive(value),
+              ),
+              _FieldRow(
+                label: l10n.maxTokensLabel,
+                hint: l10n.maxTokensHint,
+                controller: _maxTokensController,
+                onChanged: _onMaxTokensChanged,
+                placeholder: 'авто',
+              ),
+              _FieldRow(
+                label: l10n.timeoutLabel,
+                controller: _timeoutController,
+                onChanged: _onTimeoutChanged,
+                placeholder: '90',
+              ),
+              _PromptRow(
+                label: l10n.systemPromptLabel,
+                hint: l10n.systemPromptHint,
+                controller: _systemPromptController,
+                onChanged: (String value) => _controller.setSystemPrompt(value),
               ),
             ],
           ),
-          _section(
-            context,
-            l10n.modelsTitle,
-            <Widget>[
-              ListTile(
-                leading: const Icon(Icons.auto_awesome_outlined),
-                title: Text(
-                  settings.selectedModelId ?? l10n.modelNotSelected,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                subtitle: Text(provider?.name ?? l10n.errNoProvider),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (BuildContext routeContext) =>
-                        const ModelsScreen(),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          _section(
-            context,
-            l10n.generateSection,
-            <Widget>[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                child: TextField(
-                  controller: _maxTokensController,
-                  keyboardType: TextInputType.number,
-                  onChanged: _onMaxTokensChanged,
-                  decoration: InputDecoration(
-                    labelText: l10n.maxTokensLabel,
-                    helperText: l10n.maxTokensHint,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-                child: TextField(
-                  controller: _timeoutController,
-                  keyboardType: TextInputType.number,
-                  onChanged: _onTimeoutChanged,
-                  decoration: InputDecoration(
-                    labelText: l10n.timeoutLabel,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-                child: TextField(
-                  controller: _systemPromptController,
-                  minLines: 2,
-                  maxLines: 6,
-                  onChanged: (String value) =>
-                      _controller.setSystemPrompt(value),
-                  decoration: InputDecoration(
-                    labelText: l10n.systemPromptLabel,
-                    helperText: l10n.systemPromptHint,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          _section(
-            context,
-            l10n.advancedSettings,
-            <Widget>[
+          _Group(
+            label: l10n.advancedSettings,
+            children: <Widget>[
               if (efforts.isNotEmpty)
-                ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                  title: const Text('reasoning_effort'),
-                  trailing: DropdownButton<String>(
-                    value: effortValue,
-                    underline: const SizedBox.shrink(),
-                    items: <DropdownMenuItem<String>>[
+                _DropdownRow<String>(
+                  label: 'reasoning_effort',
+                  value: effortValue,
+                  items: <DropdownMenuItem<String>>[
+                    DropdownMenuItem<String>(
+                      value: '',
+                      child: Text(l10n.reasoningOff),
+                    ),
+                    for (final String level in efforts)
                       DropdownMenuItem<String>(
-                        value: '',
-                        child: Text(l10n.reasoningOff),
+                        value: level,
+                        child: Text(level),
                       ),
-                      for (final String level in efforts)
-                        DropdownMenuItem<String>(
-                          value: level,
-                          child: Text(level),
-                        ),
-                    ],
-                    onChanged: (String? value) {
-                      if (value == null) return;
-                      _controller.setReasoningEffort(value);
-                    },
-                  ),
+                  ],
+                  onChanged: (String? value) {
+                    if (value == null) return;
+                    _controller.setReasoningEffort(value);
+                  },
                 ),
-              SwitchListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                title: Text(l10n.promptCachingLabel),
-                subtitle: Text(l10n.promptCachingSubtitle),
+              _SwitchRow(
+                title: l10n.promptCachingLabel,
+                hint: l10n.promptCachingSubtitle,
                 value: settings.promptCaching,
-                onChanged: (bool value) =>
-                    _controller.setPromptCaching(value),
+                onChanged: (bool value) => _controller.setPromptCaching(value),
               ),
-              SwitchListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                title: const Text('Поиск в интернете'),
-                subtitle: const Text(
-                  'Модель может искать в DuckDuckGo и читать страницы',
-                ),
+              _SwitchRow(
+                title: 'Поиск в интернете',
+                hint: 'DuckDuckGo и чтение страниц во время ответа',
                 value: settings.webSearch,
                 onChanged: (bool value) => _controller.setWebSearch(value),
               ),
-              SwitchListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                title: const Text('Терминал (Termux)'),
-                subtitle: const Text(
-                  'Модель может выполнять команды на телефоне (RUN:)',
-                ),
+              _SwitchRow(
+                title: 'Терминал (Termux)',
+                hint: 'Модель выполняет команды на телефоне через RUN:',
                 value: settings.agentShell,
                 onChanged: (bool value) => _controller.setAgentShell(value),
               ),
-              ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                title: const Text('Проверить Termux'),
-                subtitle: const Text('Запускает echo через RUN_COMMAND'),
-                trailing: const Icon(Icons.play_arrow),
+              _ActionRow(
+                title: 'Проверить Termux',
+                hint: 'Запускает echo через RUN_COMMAND',
+                icon: Icons.play_arrow_rounded,
                 onTap: () async {
                   final messenger = ScaffoldMessenger.of(context);
                   String msg;
@@ -416,111 +329,103 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   messenger.showSnackBar(SnackBar(content: Text(msg)));
                 },
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                child: TextField(
-                  controller: _contextLimitController,
-                  keyboardType: TextInputType.number,
-                  onChanged: _onContextLimitChanged,
-                  decoration: InputDecoration(
-                    labelText: l10n.contextLimitLabel,
-                    helperText: l10n.contextLimitHint,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                  ),
-                ),
+              _FieldRow(
+                label: l10n.contextLimitLabel,
+                hint: l10n.contextLimitHint,
+                controller: _contextLimitController,
+                onChanged: _onContextLimitChanged,
+                placeholder: 'авто',
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-                child: TextField(
-                  controller: _historyDepthController,
-                  keyboardType: TextInputType.number,
-                  onChanged: _onHistoryDepthChanged,
-                  decoration: InputDecoration(
-                    labelText: l10n.historyDepthLabel,
-                    helperText: l10n.historyDepthHint,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                  ),
-                ),
+              _FieldRow(
+                label: l10n.historyDepthLabel,
+                hint: l10n.historyDepthHint,
+                controller: _historyDepthController,
+                onChanged: _onHistoryDepthChanged,
+                placeholder: 'все',
               ),
             ],
           ),
-          _section(
-            context,
-            l10n.appearanceSection,
-            <Widget>[
-              ListTile(
-                title: Text(l10n.language),
-                trailing: DropdownButton<String>(
-                  value: settings.localeCode ?? 'auto',
-                  underline: const SizedBox.shrink(),
-                  items: <DropdownMenuItem<String>>[
-                    DropdownMenuItem<String>(
-                      value: 'auto',
-                      child: Text(l10n.langAuto),
-                    ),
-                    const DropdownMenuItem<String>(
-                      value: 'en',
-                      child: Text('English'),
-                    ),
-                    const DropdownMenuItem<String>(
-                      value: 'ru',
-                      child: Text('Русский'),
-                    ),
-                    const DropdownMenuItem<String>(
-                      value: 'uk',
-                      child: Text('Українська'),
-                    ),
-                  ],
-                  onChanged: (String? value) =>
-                      _controller.setLocale(value == 'auto' ? null : value),
-                ),
+          _Group(
+            label: l10n.appearanceSection,
+            children: <Widget>[
+              _DropdownRow<String>(
+                label: l10n.language,
+                value: settings.localeCode ?? 'auto',
+                items: <DropdownMenuItem<String>>[
+                  DropdownMenuItem<String>(
+                    value: 'auto',
+                    child: Text(l10n.langAuto),
+                  ),
+                  const DropdownMenuItem<String>(
+                    value: 'en',
+                    child: Text('English'),
+                  ),
+                  const DropdownMenuItem<String>(
+                    value: 'ru',
+                    child: Text('Русский'),
+                  ),
+                  const DropdownMenuItem<String>(
+                    value: 'uk',
+                    child: Text('Українська'),
+                  ),
+                ],
+                onChanged: (String? value) =>
+                    _controller.setLocale(value == 'auto' ? null : value),
               ),
-              ListTile(
-                title: Text(l10n.themeMode),
-                trailing: DropdownButton<String>(
-                  value: settings.themeMode,
-                  underline: const SizedBox.shrink(),
-                  items: <DropdownMenuItem<String>>[
-                    DropdownMenuItem<String>(
-                      value: 'system',
-                      child: Text(l10n.themeSystem),
-                    ),
-                    DropdownMenuItem<String>(
-                      value: 'light',
-                      child: Text(l10n.themeLight),
-                    ),
-                    DropdownMenuItem<String>(
-                      value: 'dark',
-                      child: Text(l10n.themeDark),
-                    ),
-                  ],
-                  onChanged: (String? value) {
-                    if (value == null) return;
-                    _controller.setThemeMode(value);
-                  },
-                ),
+              _DropdownRow<String>(
+                label: l10n.themeMode,
+                value: settings.themeMode,
+                items: <DropdownMenuItem<String>>[
+                  DropdownMenuItem<String>(
+                    value: 'system',
+                    child: Text(l10n.themeSystem),
+                  ),
+                  DropdownMenuItem<String>(
+                    value: 'light',
+                    child: Text(l10n.themeLight),
+                  ),
+                  DropdownMenuItem<String>(
+                    value: 'dark',
+                    child: Text(l10n.themeDark),
+                  ),
+                ],
+                onChanged: (String? value) {
+                  if (value == null) return;
+                  _controller.setThemeMode(value);
+                },
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpace.x4,
+                  AppSpace.x3,
+                  AppSpace.x4,
+                  AppSpace.x4,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
-                      l10n.accentColor,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        color: theme.colorScheme.primary,
-                      ),
+                    Row(
+                      children: <Widget>[
+                        Text(
+                          l10n.accentColor,
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                        const Spacer(),
+                        Text(
+                          settings.accentColor == 'system'
+                              ? 'из обоев'
+                              : _accentLabel(l10n, settings.accentColor),
+                          style: AppType.figure(
+                            11,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: AppSpace.x3),
                     Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
+                      spacing: AppSpace.x3,
+                      runSpacing: AppSpace.x3,
                       children: <Widget>[
                         _accentSwatch(
                           key: 'system',
@@ -543,14 +448,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
             ],
           ),
-          _section(
-            context,
-            l10n.debugLog,
-            <Widget>[
-              ListTile(
-                title: Text(l10n.debugLog),
-                leading: const Icon(Icons.bug_report_outlined),
-                trailing: const Icon(Icons.chevron_right),
+          _Group(
+            label: l10n.debugLog,
+            children: <Widget>[
+              _ActionRow(
+                title: l10n.debugLog,
+                hint: 'Запросы, ответы и ошибки провайдера',
+                icon: Icons.chevron_right,
                 onTap: _showDebugLog,
               ),
             ],
@@ -560,9 +464,212 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  /// Settings read as one continuous sheet: a quiet label, the rows, a rule.
-  /// No card per section, so the eye follows the words, not the boxes.
-  Widget _section(BuildContext context, String title, List<Widget> children) {
+  Widget _accentSwatch({
+    required String key,
+    required String label,
+    required Color? color,
+    required bool selected,
+  }) {
+    final theme = Theme.of(context);
+    final bool isDark = theme.brightness == Brightness.dark;
+    final Color? tint = color;
+    final Color check = tint == null
+        ? theme.colorScheme.primary
+        : (tint.computeLuminance() > 0.5
+            ? const Color(0xFF14161A)
+            : const Color(0xFFFFFFFF));
+    return Tooltip(
+      message: label,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.control - 2),
+        onTap: () => _controller.setAccentColor(key),
+        child: AnimatedContainer(
+          duration: AppMotion.fast,
+          curve: AppMotion.curve,
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: tint ??
+                (isDark
+                    ? theme.colorScheme.surfaceContainerHigh
+                    : theme.colorScheme.surfaceContainer),
+            borderRadius: BorderRadius.circular(AppRadius.control - 2),
+            border: Border.all(
+              color: selected
+                  ? theme.colorScheme.onSurface
+                  : theme.colorScheme.outlineVariant,
+              width: selected ? 2 : 1,
+            ),
+          ),
+          child: tint == null
+              ? Icon(
+                  Icons.brightness_auto_outlined,
+                  size: 18,
+                  color: theme.colorScheme.onSurfaceVariant,
+                )
+              : (selected ? Icon(Icons.check, size: 18, color: check) : null),
+        ),
+      ),
+    );
+  }
+}
+
+/// Where the app is pointed at: provider, format and the model in use, as one
+/// block. Two tappable halves, no settings rows wasted on the same facts.
+class _ConnectionCard extends StatelessWidget {
+  const _ConnectionCard({
+    required this.providerName,
+    required this.format,
+    required this.modelId,
+    required this.contextWindow,
+    required this.onProviders,
+    required this.onModels,
+  });
+
+  final String providerName;
+  final String format;
+  final String modelId;
+  final int? contextWindow;
+  final VoidCallback onProviders;
+  final VoidCallback onModels;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(
+        AppSpace.x4,
+        AppSpace.x2,
+        AppSpace.x4,
+        0,
+      ),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Column(
+        children: <Widget>[
+          InkWell(
+            onTap: onProviders,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppRadius.card - 1),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpace.x4,
+                AppSpace.x3,
+                AppSpace.x3,
+                AppSpace.x3,
+              ),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          providerName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: <Widget>[
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 1,
+                              ),
+                              decoration: BoxDecoration(
+                                color: scheme.surfaceContainerHigh,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                format,
+                                style: AppType.figure(
+                                  10,
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpace.x2),
+                            StatusDot(color: scheme.primary, size: 5),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    Icons.chevron_right,
+                    size: 18,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Hairline(color: scheme.outlineVariant),
+          InkWell(
+            onTap: onModels,
+            borderRadius: const BorderRadius.vertical(
+              bottom: Radius.circular(AppRadius.card - 1),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpace.x4,
+                AppSpace.x3,
+                AppSpace.x3,
+                AppSpace.x3,
+              ),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      modelId,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppType.figure(
+                        14,
+                        weight: FontWeight.w500,
+                        color: scheme.onSurface,
+                      ),
+                    ),
+                  ),
+                  if (contextWindow != null) ...<Widget>[
+                    Figure(
+                      '${formatTokenCount(contextWindow!)} ctx',
+                      size: 10.5,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: AppSpace.x2),
+                  ],
+                  Icon(
+                    Icons.chevron_right,
+                    size: 18,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A titled group: quiet label, one surface, rows split by hairlines.
+class _Group extends StatelessWidget {
+  const _Group({required this.label, required this.children});
+
+  final String label;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final List<Widget> rows = <Widget>[];
     for (var i = 0; i < children.length; i++) {
@@ -579,9 +686,333 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        SectionLabel(title),
-        ...rows,
+        SectionLabel(label),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: AppSpace.x4),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(AppRadius.card),
+            border: Border.all(color: theme.colorScheme.outlineVariant),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(children: rows),
+        ),
       ],
+    );
+  }
+}
+
+class _SwitchRow extends StatelessWidget {
+  const _SwitchRow({
+    required this.title,
+    required this.value,
+    required this.onChanged,
+    this.hint,
+  });
+
+  final String title;
+  final String? hint;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    return InkWell(
+      onTap: () => onChanged(!value),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpace.x4,
+          AppSpace.x3 - 2,
+          AppSpace.x2,
+          AppSpace.x3 - 2,
+        ),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(title, style: theme.textTheme.bodyMedium),
+                  if (hint != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 1),
+                      child: Text(
+                        hint!,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpace.x2),
+            Switch(value: value, onChanged: onChanged),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Label on the left, the number itself on the right in mono. Tapping the row
+/// focuses the field, so the whole line is the target.
+class _FieldRow extends StatefulWidget {
+  const _FieldRow({
+    required this.label,
+    required this.controller,
+    required this.onChanged,
+    this.hint,
+    this.placeholder,
+  });
+
+  final String label;
+  final String? hint;
+  final String? placeholder;
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+
+  @override
+  State<_FieldRow> createState() => _FieldRowState();
+}
+
+class _FieldRowState extends State<_FieldRow> {
+  final FocusNode _focus = FocusNode();
+
+  @override
+  void dispose() {
+    _focus.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    return InkWell(
+      onTap: _focus.requestFocus,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpace.x4,
+          AppSpace.x2,
+          AppSpace.x4,
+          AppSpace.x2,
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: <Widget>[
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(widget.label, style: theme.textTheme.bodyMedium),
+                  if (widget.hint != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 1),
+                      child: Text(
+                        widget.hint!,
+                        maxLines: 2,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpace.x3),
+            SizedBox(
+              width: 96,
+              child: TextField(
+                controller: widget.controller,
+                focusNode: _focus,
+                onChanged: widget.onChanged,
+                keyboardType: TextInputType.number,
+                textAlign: TextAlign.right,
+                style: AppType.figure(
+                  13.5,
+                  weight: FontWeight.w500,
+                  color: scheme.onSurface,
+                ),
+                decoration: InputDecoration(
+                  isDense: true,
+                  filled: false,
+                  hintText: widget.placeholder,
+                  hintStyle: AppType.figure(
+                    13.5,
+                    color: scheme.onSurfaceVariant.withValues(alpha: 0.6),
+                  ),
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 6),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PromptRow extends StatelessWidget {
+  const _PromptRow({
+    required this.label,
+    required this.controller,
+    required this.onChanged,
+    this.hint,
+  });
+
+  final String label;
+  final String? hint;
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpace.x4,
+        AppSpace.x3,
+        AppSpace.x4,
+        AppSpace.x3,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(label, style: theme.textTheme.bodyMedium),
+          const SizedBox(height: AppSpace.x2),
+          TextField(
+            controller: controller,
+            onChanged: onChanged,
+            minLines: 2,
+            maxLines: 6,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: scheme.onSurface,
+              height: 1.5,
+            ),
+            decoration: InputDecoration(
+              isDense: true,
+              hintText: hint,
+              hintStyle: theme.textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant.withValues(alpha: 0.7),
+              ),
+              fillColor: scheme.surfaceContainerHigh,
+              contentPadding: const EdgeInsets.all(AppSpace.x3),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DropdownRow<T> extends StatelessWidget {
+  const _DropdownRow({
+    required this.label,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+  });
+
+  final String label;
+  final T value;
+  final List<DropdownMenuItem<T>> items;
+  final ValueChanged<T?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpace.x4,
+        AppSpace.x2,
+        AppSpace.x3,
+        AppSpace.x2,
+      ),
+      child: Row(
+        children: <Widget>[
+          Expanded(child: Text(label, style: theme.textTheme.bodyMedium)),
+          DropdownButton<T>(
+            value: value,
+            items: items,
+            onChanged: onChanged,
+            underline: const SizedBox.shrink(),
+            isDense: true,
+            borderRadius: BorderRadius.circular(AppRadius.control),
+            style: theme.textTheme.bodyMedium,
+            icon: Icon(
+              Icons.unfold_more,
+              size: 16,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionRow extends StatelessWidget {
+  const _ActionRow({
+    required this.title,
+    required this.icon,
+    required this.onTap,
+    this.hint,
+  });
+
+  final String title;
+  final String? hint;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpace.x4,
+          AppSpace.x3,
+          AppSpace.x3,
+          AppSpace.x3,
+        ),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(title, style: theme.textTheme.bodyMedium),
+                  if (hint != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 1),
+                      child: Text(
+                        hint!,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Icon(
+              icon,
+              size: 18,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

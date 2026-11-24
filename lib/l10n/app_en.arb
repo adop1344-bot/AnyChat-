@@ -123,8 +123,8 @@
   "debugLogEmpty": "Nothing logged yet.",
   "openDebugLog": "Show log",
   "clearLog": "Clear",
-  "errAuth": "The provider rejected the key: it's wrong, expired or revoked. Replace it in the provider settings. I can't see the key itself, but the response points there.",
-  "errRateLimit": "The provider says slow down: too many requests. Wait about {retryAfter} seconds or switch model. This usually clears up on its own.",
+  "errAuth": "The key was rejected: wrong, expired or revoked. Replace it in the provider settings.",
+  "errRateLimit": "Too many requests. Retry in {retryAfter} s or switch models.",
   "@errRateLimit": {
     "placeholders": {
       "retryAfter": {
@@ -132,10 +132,10 @@
       }
     }
   },
-  "errQuota": "This key ran out of balance or quota. Top up or wait for the provider's quota reset — retrying won't help.",
-  "errModelNotFound": "This model is unavailable at the provider right now: it was removed, renamed, or your key can't access it. Pick another model from the list.",
-  "errContextLength": "The conversation is longer than the model's context window. Start a new chat, trim the history, or pick a model with a larger window.",
-  "errInvalidRequest": "The provider refused the request: {details}. Usually it's a model parameter or an oversized attachment.",
+  "errQuota": "The key is out of quota. Top up the balance or wait for the quota reset.",
+  "errModelNotFound": "The provider does not serve this model: removed, renamed or closed for this key. Pick another one.",
+  "errContextLength": "The history is longer than the model context. Start a new chat, trim the history or pick a model with a bigger window.",
+  "errInvalidRequest": "The provider rejected the request: {details}. Check the model parameters and attachment size.",
   "@errInvalidRequest": {
     "placeholders": {
       "details": {
@@ -143,10 +143,10 @@
       }
     }
   },
-  "errNetwork": "I couldn't reach the provider — likely no internet or it's blocked. Check the connection and try again.",
-  "errTimeout": "The provider stayed silent until the timeout. A retry often helps; if not, switch models.",
-  "errServer": "The provider has a server-side failure (5xx). It's not your key or your text. Wait a minute and retry, or switch provider.",
-  "errUnknown": "I couldn't make sense of the provider's reply, so there's no answer. Raw response: {raw}. If it keeps happening, check the error log.",
+  "errNetwork": "No connection to the provider. Check the network and retry.",
+  "errTimeout": "The provider did not answer in time. Retry or switch models.",
+  "errServer": "Provider-side failure (5xx). Retry in a minute or switch providers.",
+  "errUnknown": "Unrecognised provider response: {raw}. See the error log.",
   "@errUnknown": {
     "placeholders": {
       "raw": {
@@ -154,8 +154,8 @@
       }
     }
   },
-  "errNoModel": "Select a model first.",
-  "errNoChat": "Chat not found. It may have been deleted.",
+  "errNoModel": "No model selected.",
+  "errNoChat": "Chat not found.",
   "attach": "Attach file",
   "removeAttachment": "Remove attachment",
   "attachmentTooBig": "File is too large (max 20 MB).",
@@ -183,7 +183,7 @@
   "statOutput": "output",
   "statThinking": "thinking",
   "reasoningOff": "Not sent",
-  "errNoProvider": "Add a provider first.",
+  "errNoProvider": "No provider added.",
   "addProvider": "Add provider",
   "providerNameLabel": "Provider name",
   "endpointLabel": "Endpoint (Base URL)",
@@ -206,7 +206,13 @@
   "favoriteModel": "Favorite",
   "pickModelTitle": "Select model",
   "providerHealthMs": "{ms} ms",
-  "@providerHealthMs": {"placeholders": {"ms": {"type": "int"}}},
+  "@providerHealthMs": {
+    "placeholders": {
+      "ms": {
+        "type": "int"
+      }
+    }
+  },
   "providerHealthOffline": "offline",
   "refreshHealth": "Recheck",
   "attachCamera": "Camera",
@@ -217,30 +223,53 @@
   "imagesMaybeUnsupported": "This model may not support images",
   "checkAllModels": "Check all models",
   "checkDone": "{ok} working, {failed} hidden",
-  "@checkDone": {"placeholders": {"ok": {"type": "int"}, "failed": {"type": "int"}}},
+  "@checkDone": {
+    "placeholders": {
+      "ok": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      }
+    }
+  },
   "checkFailed": "{count} failed",
-  "@checkFailed": {"placeholders": {"count": {"type": "int"}}},
+  "@checkFailed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "hiddenModelsCount": "{count} models hidden — recheck them in provider settings",
-  "@hiddenModelsCount": {"placeholders": {"count": {"type": "int"}}},
+  "@hiddenModelsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "codeSave": "Save as file",
   "codeSaved": "File saved",
   "thinking": "Thinking",
   "thinkingLive": "thinking…",
   "codeExpand": "Show more · {lines} lines",
-  "@codeExpand": {"placeholders": {"lines": {"type": "int"}}},
+  "@codeExpand": {
+    "placeholders": {
+      "lines": {
+        "type": "int"
+      }
+    }
+  },
   "codeCollapse": "Collapse",
   "codePreview": "Preview",
-  "errAgentAuth": "I can't fix this one — it needs a new key.",
-  "errAgentRateLimit": "I can't speed myself up, so let's give the provider a breather.",
-  "errAgentQuota": "I can't print money — that's on the provider's side.",
-  "errAgentModelNotFound": "This model is out of reach right now. Switch and we'll carry on.",
-  "errAgentContextLength": "That's too much text for one go — let's trim it.",
-  "errAgentInvalidRequest": "The provider refused, not me — let's check the parameters.",
-  "errAgentNetwork": "Without a connection I can think but not answer.",
-  "errAgentTimeout": "I waited on the provider and it never answered in time.",
-  "errAgentServer": "Not your fault and not mine — something broke on the provider's end.",
-  "errAgentUnknown": "Honestly, I couldn't parse that reply. The raw text is in the log.",
   "copyError": "Copy error details",
   "wordCount": "{count} words",
-  "@wordCount": {"placeholders": {"count": {"type": "int"}}}
+  "@wordCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

@@ -500,7 +500,7 @@ class ChatSession extends _$ChatSession {
     var rounds = 0;
     var endRounds = 0;
     final steps = <ToolStep>[];
-    await StreamGuard.begin();
+    await StreamGuard.begin(enabled: session.settings.keepAlive);
     try {
       while (true) {
         while (true) {

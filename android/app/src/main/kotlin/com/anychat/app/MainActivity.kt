@@ -1,9 +1,11 @@
 package com.anychat.fork
 
+import android.Manifest
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.os.Build
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -23,6 +25,7 @@ class MainActivity : FlutterActivity() {
         guard.setMethodCallHandler { call, result ->
             when (call.method) {
                 "start" -> {
+                    ensureNotificationPermission()
                     val intent = Intent(this, StreamService::class.java)
                     if (Build.VERSION.SDK_INT >= 26) {
                         startForegroundService(intent)
@@ -98,6 +101,16 @@ class MainActivity : FlutterActivity() {
             registerReceiver(receiver, filter)
         }
         shellReceiver = receiver
+    }
+
+    /// Android 13+ hides foreground-service notifications without this grant.
+    /// The service still runs, but asking once keeps the notification visible.
+    private fun ensureNotificationPermission() {
+        if (Build.VERSION.SDK_INT < 33) return
+        val granted = checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+        if (granted) return
+        requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 4001)
     }
 
     private fun isTermuxInstalled(): Boolean {
