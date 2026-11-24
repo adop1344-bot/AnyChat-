@@ -354,7 +354,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           onRegenerate: canRegenerate
                               ? () => ref
                                   .read(chatSessionProvider.notifier)
-                                  .regenerate(widget.chatId, message.id)
+                                  .regenerate(
+                                    widget.chatId,
+                                    targetMessageId: message.id,
+                                  )
                               : null,
                           branchPager: branchPager,
                         );

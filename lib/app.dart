@@ -21,22 +21,24 @@ class AnyChatApp extends ConsumerWidget {
       error: (Object error, StackTrace stack) => const AppSettings(),
     );
     return DynamicColorBuilder(
-      builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
-        return _buildApp(settings, lightDynamic, darkDynamic);
-      },
+      builder: (dynamicLight, dynamicDark) => _buildApp(
+        settings,
+        dynamicLight?.primary,
+        dynamicDark?.primary,
+      ),
     );
   }
 
   Widget _buildApp(
     AppSettings settings,
-    ColorScheme? lightDynamic,
-    ColorScheme? darkDynamic,
+    Color? dynamicLight,
+    Color? dynamicDark,
   ) {
     // A picked colour wins. Otherwise the wallpaper's primary is used as the
     // accent only - surfaces stay neutral either way.
     final Color? manual = kAccentColors[settings.accentColor];
-    final Color lightAccent = manual ?? lightDynamic?.primary ?? kDefaultAccent;
-    final Color darkAccent = manual ?? darkDynamic?.primary ?? kDefaultAccent;
+    final Color lightAccent = manual ?? dynamicLight ?? kDefaultAccent;
+    final Color darkAccent = manual ?? dynamicDark ?? kDefaultAccent;
     final String? localeCode = settings.localeCode;
 
     return MaterialApp(

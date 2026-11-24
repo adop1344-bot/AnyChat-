@@ -134,8 +134,7 @@ class AppType {
         );
   }
 
-  /// 400 -> 400, 500 -> 500 ... without touching deprecated `FontWeight.value`.
-  static double _axis(FontWeight weight) => 100.0 * (weight.index + 1);
+  static double _axis(FontWeight weight) => weight.value.toDouble();
 
   /// Figures, token counts, code and anything that must line up in a column.
   static TextStyle figure(

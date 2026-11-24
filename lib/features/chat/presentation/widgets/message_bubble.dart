@@ -546,7 +546,7 @@ class _ThinkingBlockState extends State<_ThinkingBlock> {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final TextStyle? style = AppType.figure(
+    final TextStyle style = AppType.figure(
       11.5,
       height: 1.5,
       color: scheme.onSurfaceVariant,
