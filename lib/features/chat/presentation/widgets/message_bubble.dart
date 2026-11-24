@@ -234,13 +234,6 @@ class MessageBubble extends StatelessWidget {
     );
   }
 
-  static String _rawErrorText(ApiError error) {
-    var text = error.raw.trim();
-    if (text.isEmpty) text = error.details?.trim() ?? '';
-    if (text.length > 1000) text = '${text.substring(0, 1000)}…';
-    return text;
-  }
-
   /// `↓1.2K ↑340 · 18.4 tok/s`. A leading `~` marks heuristic numbers.
   static String? _metricsLine(Message message) {
     final tin = message.tokensIn;
