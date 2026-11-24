@@ -85,12 +85,14 @@ class _InputBarState extends State<InputBar> {
     final ready = _hasText && !widget.isBusy;
     final tokens = estimateTokens(widget.controller.text);
 
+    final double bottomInset = MediaQuery.viewPaddingOf(context).bottom;
+
     return Container(
-      margin: const EdgeInsets.fromLTRB(
+      margin: EdgeInsets.fromLTRB(
         AppSpace.x3,
         AppSpace.x2,
         AppSpace.x3,
-        AppSpace.x2,
+        AppSpace.x2 + (bottomInset > 0 ? bottomInset : 0),
       ),
       decoration: BoxDecoration(
         color: scheme.surface,
