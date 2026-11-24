@@ -74,7 +74,21 @@ jobs:
         run: dart run build_runner build --delete-conflicting-outputs
 
       - name: flutter analyze
-        run: flutter analyze
+        shell: bash
+        run: |
+          set +e
+          flutter analyze > analyze.log 2>&1
+          rc=$?
+          cat analyze.log
+          if [ $rc -ne 0 ]; then
+            git config user.name "ci-bot"
+            git config user.email "ci@local"
+            cp analyze.log ./ci-analyze.log
+            git add -f ci-analyze.log
+            git commit -q -m "ci: analyze log for ${GITHUB_SHA::7}" || true
+            git push -q -f origin HEAD:ci-logs || true
+          fi
+          exit $rc
 
       - name: flutter test
         run: flutter test
