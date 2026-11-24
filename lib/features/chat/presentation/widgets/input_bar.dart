@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/storage/token_estimator.dart';
-
+import '../../../../core/theme/app_tokens.dart';
+import '../../../../core/ui/atoms.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../providers/domain/model_info.dart';
 import '../../domain/models.dart';
 import 'attachment_view.dart';
-import 'context_circle.dart';
 
 class InputBar extends StatefulWidget {
   const InputBar({
@@ -20,9 +20,6 @@ class InputBar extends StatefulWidget {
     this.supportedModalities = const <ModelModality>{},
     this.onAttach,
     this.onRemoveAttachment,
-    this.contextUsed,
-    this.contextLimit,
-    this.onContextTap,
     this.onTextChanged,
     this.onReasoningTap,
     this.reasoningLevel = '',
@@ -37,9 +34,6 @@ class InputBar extends StatefulWidget {
   final Set<ModelModality> supportedModalities;
   final VoidCallback? onAttach;
   final ValueChanged<int>? onRemoveAttachment;
-  final int? contextUsed;
-  final int? contextLimit;
-  final VoidCallback? onContextTap;
   final ValueChanged<String>? onTextChanged;
   final VoidCallback? onReasoningTap;
   final String reasoningLevel;
@@ -51,11 +45,13 @@ class InputBar extends StatefulWidget {
 class _InputBarState extends State<InputBar> {
   bool _hasText = false;
 
-  Color? _lampColor(BuildContext context, String level) {
-    final scheme = Theme.of(context).colorScheme;
-    if (level == 'off') return scheme.outlineVariant;
-    if (level.isEmpty || level == 'auto') return scheme.onSurfaceVariant;
-    return scheme.primary;
+  /// Reasoning is on unless the user switched it off: the lamp is lit, not
+  /// coloured, so the accent stays for action.
+  Color _lampColor(ColorScheme scheme) {
+    if (widget.reasoningLevel == 'off') {
+      return scheme.onSurfaceVariant.withValues(alpha: 0.4);
+    }
+    return scheme.onSurfaceVariant;
   }
 
   @override
@@ -82,27 +78,40 @@ class _InputBarState extends State<InputBar> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final remove = widget.onRemoveAttachment;
     final canAttach = !widget.isBusy && widget.onAttach != null;
-    final sendReady = _hasText && !widget.isBusy;
+    final ready = _hasText && !widget.isBusy;
+    final tokens = estimateTokens(widget.controller.text);
 
-    final showContext = widget.contextUsed != null &&
-        widget.contextLimit != null &&
-        widget.onContextTap != null;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+    return Container(
+      margin: const EdgeInsets.fromLTRB(
+        AppSpace.x3,
+        AppSpace.x2,
+        AppSpace.x3,
+        AppSpace.x2,
+      ),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(AppRadius.card + 2),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           if (widget.attachments.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpace.x3,
+                AppSpace.x3,
+                AppSpace.x3,
+                0,
+              ),
               child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
+                spacing: AppSpace.x2,
+                runSpacing: AppSpace.x2,
                 children: <Widget>[
                   for (var i = 0; i < widget.attachments.length; i++)
                     AttachmentChip(
@@ -112,119 +121,124 @@ class _InputBarState extends State<InputBar> {
                 ],
               ),
             ),
-          if (widget.controller.text.trim().isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4, left: 12),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  '~${formatTokenCount(estimateTokens(widget.controller.text))} tok',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
-                ),
+          TextField(
+            controller: widget.controller,
+            focusNode: widget.focusNode,
+            minLines: 1,
+            maxLines: 6,
+            textInputAction: TextInputAction.newline,
+            style: theme.textTheme.bodyMedium,
+            cursorColor: scheme.primary,
+            decoration: InputDecoration(
+              hintText: l10n.messageInputHint,
+              filled: false,
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              isCollapsed: true,
+              contentPadding: const EdgeInsets.fromLTRB(
+                AppSpace.x4,
+                AppSpace.x3 + 2,
+                AppSpace.x4,
+                AppSpace.x2,
               ),
             ),
-          Stack(
-            children: <Widget>[
-              TextField(
-                controller: widget.controller,
-                focusNode: widget.focusNode,
-                minLines: 1,
-                maxLines: 5,
-                textInputAction: TextInputAction.newline,
-                decoration: InputDecoration(
-                  hintText: l10n.messageInputHint,
-                  filled: true,
-                  fillColor: scheme.surfaceContainerHigh,
-                  contentPadding: EdgeInsets.fromLTRB(
-                    4,
-                    12,
-                    showContext ? 84 : 52,
-                    12,
-                  ),
-                  prefixIcon: SizedBox(
-                    width: widget.onReasoningTap == null ? 48 : 96,
-                    child: Row(
-                      children: <Widget>[
-                        Expanded(
-                          child: IconButton(
-                            icon: const Icon(Icons.add),
-                            tooltip: l10n.attach,
-                            onPressed: canAttach ? widget.onAttach : null,
-                          ),
-                        ),
-                        if (widget.onReasoningTap != null)
-                          Expanded(
-                            child: IconButton(
-                              icon: Icon(
-                                widget.reasoningLevel == 'off'
-                                    ? Icons.lightbulb_outline
-                                    : Icons.lightbulb,
-                              ),
-                              color: _lampColor(
-                                context,
-                                widget.reasoningLevel,
-                              ),
-                              tooltip: 'Раздумья',
-                              onPressed: widget.onReasoningTap,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(28),
-                    borderSide: BorderSide.none,
-                  ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpace.x2,
+              0,
+              AppSpace.x2,
+              AppSpace.x1,
+            ),
+            child: Row(
+              children: <Widget>[
+                QuietIconButton(
+                  icon: Icons.add,
+                  tooltip: l10n.attach,
+                  onPressed: canAttach ? widget.onAttach : null,
+                  box: 34,
                 ),
-              ),
-              if (showContext)
-                Positioned(
-                  right: 50,
-                  bottom: 9,
-                  child: ContextCircle(
-                    used: widget.contextUsed!,
-                    limit: widget.contextLimit!,
-                    onTap: widget.onContextTap,
+                if (widget.onReasoningTap != null)
+                  QuietIconButton(
+                    icon: widget.reasoningLevel == 'off'
+                        ? Icons.lightbulb_outline
+                        : Icons.lightbulb,
+                    tooltip: l10n.thinking,
+                    onPressed: widget.onReasoningTap,
+                    color: _lampColor(scheme),
+                    box: 34,
                   ),
+                const SizedBox(width: AppSpace.x1),
+                if (_hasText)
+                  Figure(
+                    '~${formatTokenCount(tokens)} tok',
+                    size: 10.5,
+                    color: scheme.onSurfaceVariant.withValues(alpha: 0.8),
+                  ),
+                const Spacer(),
+                _SendButton(
+                  busy: widget.isBusy,
+                  ready: ready,
+                  onSend: widget.onSend,
+                  onStop: widget.onStop,
+                  sendTooltip: l10n.send,
+                  stopTooltip: l10n.stop,
                 ),
-              Positioned(
-                right: 6,
-                bottom: 4,
-                child: SizedBox(
-                  width: 40,
-                  height: 40,
-                  child: widget.isBusy
-                      ? IconButton(
-                          onPressed: widget.onStop,
-                          tooltip: l10n.stop,
-                          icon: const Icon(Icons.stop),
-                          padding: EdgeInsets.zero,
-                          style: IconButton.styleFrom(
-                            backgroundColor: scheme.error,
-                            foregroundColor: scheme.onError,
-                          ),
-                        )
-                      : IconButton(
-                          onPressed: widget.onSend,
-                          tooltip: l10n.send,
-                          icon: const Icon(Icons.arrow_upward),
-                          padding: EdgeInsets.zero,
-                          style: IconButton.styleFrom(
-                            backgroundColor: sendReady
-                                ? scheme.primary
-                                : scheme.surfaceContainerHighest,
-                            foregroundColor: sendReady
-                                ? scheme.onPrimary
-                                : scheme.onSurfaceVariant,
-                          ),
-                        ),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SendButton extends StatelessWidget {
+  const _SendButton({
+    required this.busy,
+    required this.ready,
+    required this.onSend,
+    required this.onStop,
+    required this.sendTooltip,
+    required this.stopTooltip,
+  });
+
+  final bool busy;
+  final bool ready;
+  final VoidCallback onSend;
+  final VoidCallback onStop;
+  final String sendTooltip;
+  final String stopTooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final Color background =
+        busy ? scheme.surfaceContainerHighest : (ready ? scheme.primary : scheme.surfaceContainerHigh);
+    final Color foreground = busy
+        ? scheme.onSurfaceVariant
+        : (ready ? scheme.onPrimary : scheme.onSurfaceVariant);
+    return Tooltip(
+      message: busy ? stopTooltip : sendTooltip,
+      child: InkWell(
+        onTap: busy ? onStop : (ready ? onSend : null),
+        borderRadius: BorderRadius.circular(AppRadius.control),
+        child: AnimatedContainer(
+          duration: AppMotion.fast,
+          curve: AppMotion.curve,
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            color: background,
+            borderRadius: BorderRadius.circular(AppRadius.control),
+          ),
+          child: Icon(
+            busy ? Icons.stop_rounded : Icons.arrow_upward_rounded,
+            size: 18,
+            color: foreground,
+          ),
+        ),
       ),
     );
   }

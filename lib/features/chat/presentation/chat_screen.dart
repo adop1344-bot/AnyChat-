@@ -1,10 +1,10 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/error_localizer.dart';
 import '../../../core/storage/token_estimator.dart';
+import '../../../core/theme/app_tokens.dart';
+import '../../../core/ui/atoms.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../home/chat_drawer.dart';
 import '../../settings/app_settings.dart';
@@ -15,12 +15,9 @@ import '../state/chat_session.dart';
 import '../state/current_chat.dart';
 import 'widgets/chat_composer.dart';
 import 'widgets/command_palette.dart';
-import 'widgets/mascot.dart';
-import 'widgets/widget_cards.dart';
 import 'widgets/context_circle.dart';
 import 'widgets/menu_glyph.dart';
 import 'widgets/message_bubble.dart';
-import 'widgets/model_picker_sheet.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key, required this.chatId});
@@ -32,6 +29,42 @@ class ChatScreen extends ConsumerStatefulWidget {
 }
 
 class _ChatScreenState extends ConsumerState<ChatScreen> {
+  final ScrollController _scroll = ScrollController();
+  final TextEditingController _inputController = TextEditingController();
+  bool _showJump = false;
+  String? _palettePrefix;
+
+  @override
+  void initState() {
+    super.initState();
+    _scroll.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    _inputController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    final show = _scroll.hasClients && _scroll.offset > 600;
+    if (show != _showJump) {
+      setState(() => _showJump = show);
+    }
+  }
+
+  void _onInputChanged(String text) {
+    final t = text.trimLeft();
+    final show = t.startsWith('/') &&
+        !t.contains(' ') &&
+        kChatCommands.any((ChatCommand c) => c.name.startsWith(t));
+    final next = show ? t : null;
+    if (next != _palettePrefix) {
+      setState(() => _palettePrefix = next);
+    }
+  }
+
   Future<void> _editMessage(Message message) async {
     final controller = TextEditingController(text: message.content);
     String? result;
@@ -47,7 +80,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               autofocus: true,
               minLines: 3,
               maxLines: 8,
-              decoration: InputDecoration(helperText: l10n.editMessageHint),
+              decoration: InputDecoration(hintText: l10n.editMessageHint),
             ),
             actions: <Widget>[
               TextButton(
@@ -117,13 +150,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       },
     );
 
-    final mascotState = _mascotState(
-      session.isStreaming,
-      session.streamText,
-      session.streamReasoning,
-      messagesAsync.asData?.value.length ?? 0,
-    );
-
     final branches = branchesAsync.when(
       data: (List<Branch> value) => value,
       loading: () => <Branch>[],
@@ -150,100 +176,31 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           drawer: const ChatDrawer(),
           body: Builder(
             builder: (BuildContext scaffoldContext) => SafeArea(
-              child: Stack(
+              bottom: false,
+              child: Column(
                 children: <Widget>[
-                  if (mascotState != null)
-                    Positioned(
-                      right: 16,
-                      bottom: 100,
-                      child: Mascot(state: mascotState, size: 44),
-                    ),
-                  if (_showJump)
-                    Positioned(
-                      left: 20,
-                      bottom: 96,
-                      child: FloatingActionButton(
-                        mini: true,
-                        onPressed: () => _scroll.animateTo(
-                          0,
-                          duration: const Duration(milliseconds: 250),
-                          curve: Curves.easeOut,
-                        ),
-                        child: const Icon(Icons.arrow_downward),
+                  _ChatTopBar(
+                    title: chat.title,
+                    onMenu: () => Scaffold.of(scaffoldContext).openDrawer(),
+                    onNewChat: _startNewChat,
+                  ),
+                  if (session.busy)
+                    const LinearProgressIndicator(minHeight: 2),
+                  Expanded(
+                    child: messagesAsync.when(
+                      loading: () => const Center(
+                        child: CircularProgressIndicator(),
                       ),
-                    ),
-                  Column(
-                    children: <Widget>[
-                      if (session.busy)
-                        const LinearProgressIndicator(minHeight: 2),
-                      if (session.toolNotice.isNotEmpty)
-                        Container(
-                          width: double.infinity,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .secondaryContainer,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 6,
-                          ),
-                          child: Text(
-                            session.toolNotice,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSecondaryContainer,
-                                ),
-                          ),
-                        ),
-                      const SizedBox(height: 56),
-                      ChatWidgetStrip(chatId: widget.chatId),
-                      Expanded(
-                        child: messagesAsync.when(
-                          loading: () => const Center(
-                            child: CircularProgressIndicator(),
-                          ),
-                          error: (Object error, StackTrace stack) => Center(
-                            child: Text(l10n.errUnknown('$error')),
-                          ),
-                          data: (List<Message> allMessages) => _buildChatBody(
-                            l10n,
-                            chat,
-                            allMessages,
-                            branches,
-                            session,
-                          ),
-                        ),
+                      error: (Object error, StackTrace stack) => Center(
+                        child: Text(l10n.errUnknown('$error')),
                       ),
-                    ],
-                  ),
-                  Positioned(
-                    top: 4,
-                    left: 4,
-                    child: IconButton.filledTonal(
-                      tooltip: l10n.menu,
-                      icon: const MenuGlyph(),
-                      onPressed: () =>
-                          Scaffold.of(scaffoldContext).openDrawer(),
-                    ),
-                  ),
-                  Positioned(
-                    top: 10,
-                    left: 64,
-                    right: 64,
-                    child: Center(child: CurrentModelChip()),
-                  ),
-                  Positioned(
-                    top: 4,
-                    right: 4,
-                    child: IconButton.filledTonal(
-                      tooltip: l10n.newChat,
-                      icon: const Icon(Icons.edit_outlined),
-                      onPressed: _startNewChat,
+                      data: (List<Message> allMessages) => _buildChatBody(
+                        l10n,
+                        chat,
+                        allMessages,
+                        branches,
+                        session,
+                      ),
                     ),
                   ),
                 ],
@@ -323,123 +280,100 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     return Column(
       children: <Widget>[
+        _ContextStrip(
+          used: usage.used,
+          limit: usage.limit,
+          approximate: usage.approximate,
+          onTap: () => _showContextStats(
+            l10n,
+            chat,
+            usage.used,
+            usage.limit,
+            usage.approximate,
+          ),
+        ),
+        if (session.toolNotice.isNotEmpty) _ToolNotice(text: session.toolNotice),
         Expanded(
-          child: messages.isEmpty
-              ? Center(
-                  child: SingleChildScrollView(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          Container(
-                            width: 72,
-                            height: 72,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerHighest,
-                            ),
-                            child: Icon(
-                              Icons.auto_awesome_outlined,
-                              size: 32,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          Text(
-                            l10n.startWith,
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineMedium
-                                ?.copyWith(fontWeight: FontWeight.w600),
-                          ),
-                          const SizedBox(height: 24),
-                          Wrap(
-                            alignment: WrapAlignment.center,
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: <Widget>[
-                              for (final String suggestion in <String>[
-                                l10n.suggest1,
-                                l10n.suggest2,
-                                l10n.suggest3,
-                              ])
-                                ActionChip(
-                                  label: Text(suggestion),
-                                  onPressed: () => ref
-                                      .read(chatSessionProvider.notifier)
-                                      .send(widget.chatId, suggestion),
-                                ),
-                            ],
-                          ),
-                        ],
-                      ),
+          child: Stack(
+            children: <Widget>[
+              messages.isEmpty
+                  ? _EmptyChat(
+                      l10n: l10n,
+                      onPick: (String text) => ref
+                          .read(chatSessionProvider.notifier)
+                          .send(widget.chatId, text),
+                    )
+                  : ListView.builder(
+                      controller: _scroll,
+                      reverse: true,
+                      padding: const EdgeInsets.only(top: 12, bottom: 12),
+                      itemCount: reversed.length,
+                      itemBuilder: (BuildContext itemContext, int index) {
+                        final message = reversed[index];
+                        final isLast = index == 0;
+                        final isAssistant = message.role == 'assistant';
+                        final isStreaming = session.isStreaming &&
+                            session.streamingMessageId == message.id;
+                        final isAnchor = message.id == anchorId;
+                        final canRegenerate =
+                            isAssistant && (isLast || isAnchor);
+                        BranchPager? branchPager;
+                        if (isAnchor &&
+                            branches.length > 1 &&
+                            !session.isStreaming &&
+                            !session.busy) {
+                          var index = branches.indexWhere(
+                            (Branch b) => b.id == chat.activeBranchId,
+                          );
+                          if (index < 0) index = 0;
+                          branchPager = (
+                            current: index + 1,
+                            total: branches.length,
+                            onPrev: index > 0
+                                ? () => _switchTo(branches[index - 1].id)
+                                : null,
+                            onNext: index < branches.length - 1
+                                ? () => _switchTo(branches[index + 1].id)
+                                : null,
+                          );
+                        }
+                        return MessageBubble(
+                          message: message,
+                          streamingText: session.streamText,
+                          streamingReasoning: session.streamReasoning,
+                          toolSteps: isStreaming
+                              ? session.streamToolSteps
+                              : message.toolSteps,
+                          isStreaming: isStreaming,
+                          isLast: isLast,
+                          showRegenerate: canRegenerate,
+                          onEdit: message.role == 'user'
+                              ? () => _editMessage(message)
+                              : null,
+                          onBranch: () => _branchFrom(message),
+                          onRegenerate: canRegenerate
+                              ? () => ref
+                                  .read(chatSessionProvider.notifier)
+                                  .regenerate(widget.chatId, message.id)
+                              : null,
+                          branchPager: branchPager,
+                        );
+                      },
+                    ),
+              if (_showJump)
+                Positioned(
+                  right: AppSpace.x4,
+                  bottom: AppSpace.x4,
+                  child: _JumpButton(
+                    onTap: () => _scroll.animateTo(
+                      0,
+                      duration: AppMotion.base,
+                      curve: AppMotion.curve,
                     ),
                   ),
-                )
-              : ListView.builder(
-                  controller: _scroll,
-                  reverse: true,
-                  padding: const EdgeInsets.only(top: 8, bottom: 8),
-                  itemCount: reversed.length,
-                  itemBuilder: (BuildContext itemContext, int index) {
-                    final message = reversed[index];
-                    final isLast = index == 0;
-                    final isAssistant = message.role == 'assistant';
-                    final isStreaming = session.isStreaming &&
-                        session.streamingMessageId == message.id;
-                    final isAnchor = message.id == anchorId;
-                    final canRegenerate =
-                        isAssistant && (isLast || isAnchor);
-                    BranchPager? branchPager;
-                    if (isAnchor &&
-                        branches.length > 1 &&
-                        !session.isStreaming &&
-                        !session.busy) {
-                      var index = branches
-                          .indexWhere((Branch b) => b.id == chat.activeBranchId);
-                      if (index < 0) index = 0;
-                      branchPager = (
-                        current: index + 1,
-                        total: branches.length,
-                        onPrev: index > 0
-                            ? () => _switchTo(branches[index - 1].id)
-                            : null,
-                        onNext: index < branches.length - 1
-                            ? () => _switchTo(branches[index + 1].id)
-                            : null,
-                      );
-                    }
-                    return MessageBubble(
-                      message: message,
-                      streamingText: session.streamText,
-                      streamingReasoning: session.streamReasoning,
-                      toolSteps: isStreaming
-                          ? session.streamToolSteps
-                          : message.toolSteps,
-                      isStreaming: isStreaming,
-                      isLast: isLast,
-                      showRegenerate: canRegenerate,
-                      onEdit: message.role == 'user'
-                          ? () => _editMessage(message)
-                          : null,
-                      onBranch: () => _branchFrom(message),
-                      onRegenerate: canRegenerate
-                          ? () => ref
-                              .read(chatSessionProvider.notifier)
-                              .regenerate(
-                                widget.chatId,
-                                targetMessageId:
-                                    isAnchor && !isLast ? message.id : null,
-                              )
-                          : null,
-                      branchPager: branchPager,
-                    );
-                  },
                 ),
+            ],
+          ),
         ),
         if (_palettePrefix != null)
           CommandPalette(
@@ -462,91 +396,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     text,
                     attachments: attachments,
                   ),
-          contextUsed: usage.used,
-          contextLimit: usage.limit,
-          onContextTap: () => _showContextStats(
-            l10n,
-            chat,
-            usage.used,
-            usage.limit,
-            usage.approximate,
-          ),
         ),
       ],
     );
-  }
-
-  final ScrollController _scroll = ScrollController();
-  final TextEditingController _inputController = TextEditingController();
-  bool _showJump = false;
-  String? _palettePrefix;
-  Timer? _pulse;
-  int _mascotLen = -1;
-  int _mascotMsgCount = -1;
-  DateTime _mascotProgressAt = DateTime.now();
-  DateTime _mascotActivityAt = DateTime.now();
-
-  void _onScroll() {
-    final show = _scroll.hasClients && _scroll.offset > 600;
-    if (show != _showJump) {
-      setState(() => _showJump = show);
-    }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _scroll.addListener(_onScroll);
-    _pulse = Timer.periodic(const Duration(seconds: 2), (_) {
-      if (mounted) setState(() {});
-    });
-  }
-
-  @override
-  void dispose() {
-    _pulse?.cancel();
-    _scroll.dispose();
-    _inputController.dispose();
-    super.dispose();
-  }
-
-  void _onInputChanged(String text) {
-    final t = text.trimLeft();
-    final show = t.startsWith('/') &&
-        !t.contains(' ') &&
-        kChatCommands.any((ChatCommand c) => c.name.startsWith(t));
-    final next = show ? t : null;
-    if (next != _palettePrefix) {
-      setState(() => _palettePrefix = next);
-    }
-  }
-
-  MascotState? _mascotState(bool isStreaming, String streamText,
-      String streamReasoning, int msgCount) {
-    final now = DateTime.now();
-    if (msgCount != _mascotMsgCount) {
-      _mascotMsgCount = msgCount;
-      _mascotActivityAt = now;
-    }
-    if (isStreaming) {
-      _mascotActivityAt = now;
-      final len = streamText.length + streamReasoning.length;
-      if (len != _mascotLen) {
-        _mascotLen = len;
-        _mascotProgressAt = now;
-      }
-      if (now.difference(_mascotProgressAt) > const Duration(seconds: 20)) {
-        return MascotState.sleeping;
-      }
-      return streamText.isEmpty
-          ? MascotState.thinking
-          : MascotState.writing;
-    }
-    _mascotLen = -1;
-    if (now.difference(_mascotActivityAt) > const Duration(minutes: 3)) {
-      return MascotState.sleeping;
-    }
-    return null;
   }
 
   void _showContextStats(
@@ -557,34 +409,58 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     bool approximate,
   ) {
     final free = limit > used ? limit - used : 0;
-    showDialog<void>(
+    final ratio = limit <= 0 ? 0.0 : used / limit;
+    showModalBottomSheet<void>(
       context: context,
-      builder: (BuildContext dialogContext) {
-        final dl = AppLocalizations.of(dialogContext);
-        return AlertDialog(
-          title: Text(dl.contextDetails),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              _statRow(
-                dl.statUsed,
-                approximate
-                    ? '~${formatTokenCount(used)}'
-                    : formatTokenCount(used),
-              ),
-              _statRow(dl.statFree, formatTokenCount(free)),
-              const Divider(height: 16),
-              _statRow(dl.statInput, formatTokenCount(chat.usageInput)),
-              _statRow(dl.statOutput, formatTokenCount(chat.usageOutput)),
-              _statRow(dl.statThinking, formatTokenCount(chat.usageThinking)),
-            ],
-          ),
-          actions: <Widget>[
-            FilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(dl.closeButton),
+      showDragHandle: true,
+      builder: (BuildContext sheetContext) {
+        final dl = AppLocalizations.of(sheetContext);
+        final ThemeData theme = Theme.of(sheetContext);
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpace.x5,
+              0,
+              AppSpace.x5,
+              AppSpace.x5,
             ),
-          ],
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(dl.contextDetails, style: theme.textTheme.titleLarge),
+                const SizedBox(height: AppSpace.x4),
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Meter(ratio: ratio, height: 4),
+                    ),
+                    const SizedBox(width: AppSpace.x3),
+                    Figure(
+                      '${(ratio.clamp(0.0, 1.0) * 100).toStringAsFixed(0)}%',
+                      size: 12,
+                      weight: FontWeight.w500,
+                      color: contextStatusColor(ratio),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpace.x4),
+                _statRow(
+                  dl.statUsed,
+                  approximate
+                      ? '~${formatTokenCount(used)}'
+                      : formatTokenCount(used),
+                ),
+                _statRow(dl.statFree, formatTokenCount(free)),
+                const SizedBox(height: AppSpace.x2),
+                const Hairline(),
+                const SizedBox(height: AppSpace.x2),
+                _statRow(dl.statInput, formatTokenCount(chat.usageInput)),
+                _statRow(dl.statOutput, formatTokenCount(chat.usageOutput)),
+                _statRow(dl.statThinking, formatTokenCount(chat.usageThinking)),
+              ],
+            ),
+          ),
         );
       },
     );
@@ -593,11 +469,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Widget _statRow(String label, String value) {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: AppSpace.x2),
       child: Row(
         children: <Widget>[
-          Expanded(child: Text(label, style: theme.textTheme.bodyMedium)),
-          Text(value, style: theme.textTheme.titleSmall),
+          Expanded(
+            child: Text(
+              label,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          Figure(value, size: 12.5, weight: FontWeight.w500),
         ],
       ),
     );
@@ -616,5 +499,265 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       ChatIssue.noChat => l10n.errNoChat,
       ChatIssue.noProvider => l10n.errNoProvider,
     };
+  }
+}
+
+/// Top bar: navigation, the chat's own name, and one action. The model lives
+/// in the instrument strip below, next to the context meter it belongs with.
+class _ChatTopBar extends StatelessWidget {
+  const _ChatTopBar({
+    required this.title,
+    required this.onMenu,
+    required this.onNewChat,
+  });
+
+  final String title;
+  final VoidCallback onMenu;
+  final VoidCallback onNewChat;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    return Container(
+      height: 56,
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: theme.colorScheme.outlineVariant),
+        ),
+      ),
+      child: Row(
+        children: <Widget>[
+          const SizedBox(width: AppSpace.x2),
+          IconButton(
+            tooltip: AppLocalizations.of(context).menu,
+            onPressed: onMenu,
+            icon: const MenuGlyph(size: 18),
+          ),
+          const SizedBox(width: AppSpace.x1),
+          Expanded(
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.titleMedium,
+            ),
+          ),
+          QuietIconButton(
+            icon: Icons.add_comment_outlined,
+            tooltip: AppLocalizations.of(context).newChat,
+            onPressed: onNewChat,
+          ),
+          const SizedBox(width: AppSpace.x2),
+        ],
+      ),
+    );
+  }
+}
+
+/// The signature: a hairline instrument row under the top bar. Context meter
+/// on the left, the active model on the right, both tappable.
+class _ContextStrip extends ConsumerWidget {
+  const _ContextStrip({
+    required this.used,
+    required this.limit,
+    required this.approximate,
+    required this.onTap,
+  });
+
+  final int used;
+  final int limit;
+  final bool approximate;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ThemeData theme = Theme.of(context);
+    final double ratio = limit <= 0 ? 0 : used / limit;
+    final Color status = contextStatusColor(ratio);
+    final String mark = approximate ? '~' : '';
+    final settings = ref.watch(settingsControllerProvider).when(
+          data: (AppSettings value) => value,
+          loading: () => const AppSettings(),
+          error: (Object error, StackTrace stack) => const AppSettings(),
+        );
+    final modelLabel = settings.selectedModelId ?? '—';
+
+    return Material(
+      color: theme.colorScheme.surface,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          height: 34,
+          padding: const EdgeInsets.symmetric(horizontal: AppSpace.x4),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(color: theme.colorScheme.outlineVariant),
+            ),
+          ),
+          child: Row(
+            children: <Widget>[
+              Meter(ratio: ratio, width: 48, height: 3, color: status),
+              const SizedBox(width: AppSpace.x2),
+              Figure(
+                '$mark${formatTokenCount(used)} / ${formatTokenCount(limit)}',
+                size: 11,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              const Spacer(),
+              Flexible(
+                child: Text(
+                  modelLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
+                  style: AppType.figure(
+                    11,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ToolNotice extends StatelessWidget {
+  const _ToolNotice({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpace.x4,
+        vertical: AppSpace.x2,
+      ),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        border: Border(
+          bottom: BorderSide(color: theme.colorScheme.outlineVariant),
+        ),
+      ),
+      child: Row(
+        children: <Widget>[
+          StatusDot(color: theme.colorScheme.primary),
+          const SizedBox(width: AppSpace.x2),
+          Expanded(
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppType.figure(
+                11,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _JumpButton extends StatelessWidget {
+  const _JumpButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    return Material(
+      color: theme.colorScheme.surface,
+      borderRadius: BorderRadius.circular(AppRadius.control),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.control),
+        child: Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadius.control),
+            border: Border.all(color: theme.colorScheme.outlineVariant),
+          ),
+          child: Icon(
+            Icons.arrow_downward,
+            size: 16,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// First screen of an empty chat: the question, then three quiet rows.
+class _EmptyChat extends StatelessWidget {
+  const _EmptyChat({required this.l10n, required this.onPick});
+
+  final AppLocalizations l10n;
+  final ValueChanged<String> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final List<String> suggestions = <String>[
+      l10n.suggest1,
+      l10n.suggest2,
+      l10n.suggest3,
+    ];
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpace.x4,
+          AppSpace.x10,
+          AppSpace.x4,
+          AppSpace.x6,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(l10n.startWith, style: theme.textTheme.headlineMedium),
+            const SizedBox(height: AppSpace.x2),
+            Text(
+              l10n.emptyChatHint,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: AppSpace.x6),
+            for (final String suggestion in suggestions)
+              InkWell(
+                onTap: () => onPick(suggestion),
+                borderRadius: BorderRadius.circular(AppRadius.control),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpace.x3),
+                  child: Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: Text(
+                          suggestion,
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                      ),
+                      Icon(
+                        Icons.arrow_outward,
+                        size: 15,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 }

@@ -5,11 +5,13 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/errors/api_error.dart';
 import '../../../../core/storage/token_estimator.dart';
+import '../../../../core/theme/app_tokens.dart';
+import '../../../../core/ui/atoms.dart';
 import '../../domain/models.dart';
 import '../../../../l10n/app_localizations.dart';
 import 'attachment_view.dart';
-import 'tool_steps_view.dart';
 import 'code_block.dart';
+import 'tool_steps_view.dart';
 
 /// Compact `‹ 2/2 ›` switcher between regenerations of the same message.
 typedef BranchPager = ({
@@ -52,40 +54,37 @@ class MessageBubble extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final isUser = message.role == 'user';
-    final text = isStreaming ? streamingText : message.content;
-    final reasoning = isStreaming
-        ? streamingReasoning
-        : message.reasoning ?? '';
-    final storedError = message.errorType;
-    final error = storedError == null
+    final bool isUser = message.role == 'user';
+    final String text = isStreaming ? streamingText : message.content;
+    final String reasoning =
+        isStreaming ? streamingReasoning : message.reasoning ?? '';
+    final String? storedError = message.errorType;
+    final ApiError? error = storedError == null
         ? null
         : ApiError.fromStored(storedError, details: message.errorDetails);
 
-    final showCopy = !isStreaming && message.content.trim().isNotEmpty;
-    final wordCount = isUser || isStreaming || !showCopy
-        ? 0
-        : _countWords(message.content);
-    final metricsLine = isUser || isStreaming ? null : _metricsLine(message);
-    final showBranch = onBranch != null && (isLast || branchPager != null);
-    final hasActions = showCopy ||
+    final bool showCopy = !isStreaming && message.content.trim().isNotEmpty;
+    final int wordCount =
+        isUser || isStreaming || !showCopy ? 0 : _countWords(message.content);
+    final String? metricsLine = isUser || isStreaming ? null : _metricsLine(message);
+    final bool showBranch = onBranch != null && (isLast || branchPager != null);
+    final bool hasActions = showCopy ||
         onEdit != null ||
         showBranch ||
         branchPager != null ||
         (onRegenerate != null && error == null);
 
-    final generatingStyle = theme.textTheme.bodyMedium?.copyWith(
-      fontStyle: FontStyle.italic,
+    final TextStyle generatingStyle = theme.textTheme.bodyMedium!.copyWith(
       color: scheme.onSurfaceVariant,
     );
 
-    final content = <Widget>[
+    final List<Widget> content = <Widget>[
       if (message.attachments.isNotEmpty)
         Padding(
-          padding: const EdgeInsets.only(bottom: 6),
+          padding: const EdgeInsets.only(bottom: AppSpace.x2),
           child: Wrap(
-            spacing: 6,
-            runSpacing: 6,
+            spacing: AppSpace.x2,
+            runSpacing: AppSpace.x2,
             children: <Widget>[
               for (final attachment in message.attachments)
                 AttachmentPreview(attachment: attachment),
@@ -114,76 +113,31 @@ class MessageBubble extends StatelessWidget {
         )
       else if (error == null)
         Text(l10n.generating, style: generatingStyle),
-      if (error != null) ...<Widget>[
-        const SizedBox(height: 6),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Padding(
-              padding: const EdgeInsets.only(top: 1),
-              child: Icon(
-                Icons.error_outline,
-                size: 15,
-                color: scheme.error,
-              ),
-            ),
-            const SizedBox(width: 6),
-            Flexible(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Text(
-                    'HTTP ${error.statusCode ?? '-'} · ${error.type.name}',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: scheme.error,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  if (_rawErrorText(error).isNotEmpty)
-                    Text(
-                      _rawErrorText(error),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        fontFamily: 'monospace',
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
+      if (error != null)
+        _ErrorBlock(
+          error: error,
+          showRetry: showRegenerate,
+          onRetry: onRegenerate,
+          onCopy: () =>
+              _copyContent(context, _errorReport(l10n, error)),
         ),
-        Padding(
-          padding: const EdgeInsets.only(top: 2),
-          child: TextButton.icon(
-            onPressed: () => _copyContent(
-              context,
-              _errorReport(l10n, error),
-            ),
-            icon: const Icon(Icons.bug_report_outlined, size: 16),
-            label: Text(l10n.copyError),
-          ),
-        ),
-        if (showRegenerate)
-          TextButton.icon(
-            onPressed: onRegenerate,
-            icon: const Icon(Icons.refresh, size: 16),
-            label: Text(l10n.retry),
-          ),
-      ],
     ];
 
-    final Widget bubble;
+    final Widget body;
     if (isUser) {
-      bubble = Container(
+      body = Container(
         constraints: BoxConstraints(
           maxWidth: MediaQuery.sizeOf(context).width * 0.82,
         ),
-        padding: const EdgeInsets.fromLTRB(14, 8, 12, 6),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpace.x3 + 2,
+          AppSpace.x2 + 2,
+          AppSpace.x3 + 2,
+          AppSpace.x2 + 2,
+        ),
         decoration: BoxDecoration(
-          color: scheme.primaryContainer,
-          borderRadius: BorderRadius.circular(20),
+          color: scheme.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(AppRadius.card),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.end,
@@ -192,9 +146,9 @@ class MessageBubble extends StatelessWidget {
         ),
       );
     } else {
-      bubble = ConstrainedBox(
+      body = ConstrainedBox(
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.sizeOf(context).width * 0.88,
+          maxWidth: MediaQuery.sizeOf(context).width * 0.9,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -205,96 +159,80 @@ class MessageBubble extends StatelessWidget {
     }
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
-      child: Align(
-        alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment:
-              isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-          children: <Widget>[
-            bubble,
-            if (hasActions)
-              Padding(
-                padding: EdgeInsets.only(
-                  top: 2,
-                  bottom: 2,
-                  left: isUser ? 0 : 4,
-                  right: isUser ? 4 : 0,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    if (branchPager != null)
-                      _BranchPager(pager: branchPager!),
-                    if (metricsLine != null)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 6),
-                        child: Text(
-                          metricsLine,
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                    if (wordCount > 0)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 4),
-                        child: Text(
-                          l10n.wordCount(wordCount),
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                    if (showCopy)
-                      IconButton(
-                        onPressed: () =>
-                            _copyContent(context, message.content),
-                        tooltip: l10n.copy,
-                        iconSize: 18,
-                        visualDensity: VisualDensity.compact,
-                        color: scheme.onSurfaceVariant,
-                        icon: const Icon(Icons.content_copy),
-                      ),
-                    if (onEdit != null)
-                      IconButton(
-                        onPressed: onEdit,
-                        tooltip: l10n.editMessage,
-                        iconSize: 18,
-                        visualDensity: VisualDensity.compact,
-                        color: scheme.onSurfaceVariant,
-                        icon: const Icon(Icons.edit_outlined),
-                      ),
-                    if (showBranch)
-                      IconButton(
-                        onPressed: onBranch,
-                        tooltip: l10n.branchFromHere,
-                        iconSize: 18,
-                        visualDensity: VisualDensity.compact,
-                        color: scheme.onSurfaceVariant,
-                        icon: const Icon(Icons.account_tree_outlined),
-                      ),
-                    if (onRegenerate != null && error == null)
-                      IconButton(
-                        onPressed: onRegenerate,
-                        tooltip: l10n.regenerate,
-                        iconSize: 18,
-                        visualDensity: VisualDensity.compact,
-                        color: scheme.onSurfaceVariant,
-                        icon: const Icon(Icons.refresh),
-                      ),
-                  ],
-                ),
+      padding: EdgeInsets.fromLTRB(
+        AppSpace.x4,
+        isUser ? AppSpace.x3 : AppSpace.x4,
+        AppSpace.x4,
+        isUser ? 0 : AppSpace.x2,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment:
+            isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        children: <Widget>[
+          body,
+          if (hasActions)
+            Padding(
+              padding: EdgeInsets.only(
+                top: AppSpace.x1,
+                left: isUser ? 0 : 0,
+                right: isUser ? 0 : 0,
               ),
-          ],
-        ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  if (branchPager != null) _BranchPager(pager: branchPager!),
+                  if (metricsLine != null) ...<Widget>[
+                    Figure(metricsLine, size: 10.5),
+                    const SizedBox(width: AppSpace.x2),
+                  ],
+                  if (wordCount > 0) ...<Widget>[
+                    Figure(
+                      l10n.wordCount(wordCount),
+                      size: 10.5,
+                    ),
+                    const SizedBox(width: AppSpace.x2),
+                  ],
+                  if (showCopy)
+                    QuietIconButton(
+                      icon: Icons.content_copy,
+                      tooltip: l10n.copy,
+                      box: 30,
+                      size: 15,
+                      onPressed: () => _copyContent(context, message.content),
+                    ),
+                  if (onEdit != null)
+                    QuietIconButton(
+                      icon: Icons.edit_outlined,
+                      tooltip: l10n.editMessageTitle,
+                      box: 30,
+                      size: 15,
+                      onPressed: onEdit,
+                    ),
+                  if (showBranch)
+                    QuietIconButton(
+                      icon: Icons.call_split,
+                      tooltip: l10n.branchFromHere,
+                      box: 30,
+                      size: 15,
+                      onPressed: onBranch,
+                    ),
+                  if (onRegenerate != null && error == null)
+                    QuietIconButton(
+                      icon: Icons.refresh,
+                      tooltip: l10n.regenerate,
+                      box: 30,
+                      size: 15,
+                      onPressed: onRegenerate,
+                    ),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }
 
-  /// Raw provider payload, preferred over humanized text: users debugging
-  /// their own API keys want the actual response body.
   static String _rawErrorText(ApiError error) {
     var text = error.raw.trim();
     if (text.isEmpty) text = error.details?.trim() ?? '';
@@ -356,6 +294,97 @@ class MessageBubble extends StatelessWidget {
   }
 }
 
+/// Failures are part of the transcript: a hairline block with the status line
+/// in mono and the raw body underneath, not a red banner.
+class _ErrorBlock extends StatelessWidget {
+  const _ErrorBlock({
+    required this.error,
+    required this.showRetry,
+    required this.onRetry,
+    required this.onCopy,
+  });
+
+  final ApiError error;
+  final bool showRetry;
+  final VoidCallback? onRetry;
+  final VoidCallback onCopy;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final raw = MessageBubble._rawErrorText(error);
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: AppSpace.x2),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpace.x3,
+        AppSpace.x2 + 2,
+        AppSpace.x3,
+        AppSpace.x2,
+      ),
+      decoration: BoxDecoration(
+        color: scheme.error.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(AppRadius.control),
+        border: Border.all(color: scheme.error.withValues(alpha: 0.24)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              StatusDot(color: scheme.error, size: 5),
+              const SizedBox(width: AppSpace.x2),
+              Figure(
+                'HTTP ${error.statusCode ?? '-'} · ${error.type.name}',
+                size: 11,
+                weight: FontWeight.w500,
+                color: scheme.error,
+              ),
+            ],
+          ),
+          if (raw.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpace.x1),
+              child: Text(
+                raw,
+                maxLines: 4,
+                overflow: TextOverflow.ellipsis,
+                style: AppType.figure(
+                  11,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          const SizedBox(height: AppSpace.x1),
+          Row(
+            children: <Widget>[
+              TextButton(
+                onPressed: onCopy,
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  foregroundColor: scheme.onSurfaceVariant,
+                ),
+                child: Text(l10n.copyError),
+              ),
+              if (showRetry)
+                TextButton(
+                  onPressed: onRetry,
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  child: Text(l10n.retry),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _BranchPager extends StatelessWidget {
   const _BranchPager({required this.pager});
 
@@ -365,24 +394,22 @@ class _BranchPager extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Container(
-      height: 30,
-      margin: const EdgeInsets.only(right: 4),
+      height: 26,
+      margin: const EdgeInsets.only(right: AppSpace.x2),
       decoration: BoxDecoration(
         border: Border.all(color: scheme.outlineVariant),
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           _arrow(context, Icons.chevron_left, pager.onPrev),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 1),
-            child: Text(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: Figure(
               '${pager.current}/${pager.total}',
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w600,
-                  ),
+              size: 10.5,
+              weight: FontWeight.w500,
             ),
           ),
           _arrow(context, Icons.chevron_right, pager.onNext),
@@ -395,14 +422,15 @@ class _BranchPager extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return InkWell(
       onTap: onTap,
-      customBorder: const CircleBorder(),
       child: SizedBox(
-        width: 30,
-        height: 30,
+        width: 26,
+        height: 26,
         child: Icon(
           icon,
-          size: 18,
-          color: onTap == null ? scheme.outline : scheme.onSurfaceVariant,
+          size: 15,
+          color: onTap == null
+              ? scheme.onSurfaceVariant.withValues(alpha: 0.35)
+              : scheme.onSurfaceVariant,
         ),
       ),
     );
@@ -424,10 +452,13 @@ class _MessageBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (isUser) {
-      return SelectableText(content);
-    }
     final theme = Theme.of(context);
+    if (isUser) {
+      return SelectableText(
+        content,
+        style: theme.textTheme.bodyMedium,
+      );
+    }
     final data = streaming ? '$content▌' : content;
     return SelectionArea(
       child: MarkdownBody(
@@ -442,23 +473,40 @@ class _MessageBody extends StatelessWidget {
         },
         styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
           p: theme.textTheme.bodyMedium,
-          code: theme.textTheme.bodySmall?.copyWith(
-            fontFamily: 'monospace',
-            backgroundColor: theme.colorScheme.surfaceContainerHighest,
+          h1: theme.textTheme.headlineSmall,
+          h2: theme.textTheme.titleLarge,
+          h3: theme.textTheme.titleMedium,
+          h4: theme.textTheme.titleSmall,
+          a: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.primary,
+            decoration: TextDecoration.underline,
+            decorationColor: theme.colorScheme.primary.withValues(alpha: 0.4),
+          ),
+          code: AppType.figure(
+            12.5,
+            color: theme.colorScheme.onSurface,
+          ).copyWith(
+            backgroundColor: theme.colorScheme.surfaceContainerHigh,
           ),
           codeblockDecoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(12),
+            color: theme.colorScheme.surfaceContainerHigh,
+            borderRadius: BorderRadius.circular(AppRadius.control),
           ),
           blockquoteDecoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHigh,
             border: Border(
               left: BorderSide(
-                color: theme.colorScheme.outline,
-                width: 3,
+                color: theme.colorScheme.outlineVariant,
+                width: 2,
               ),
             ),
           ),
+          blockquotePadding: const EdgeInsets.only(left: AppSpace.x3),
+          horizontalRuleDecoration: BoxDecoration(
+            border: Border(
+              top: BorderSide(color: theme.colorScheme.outlineVariant),
+            ),
+          ),
+          listBullet: theme.textTheme.bodyMedium,
         ),
       ),
     );
@@ -478,6 +526,8 @@ class _MessageBody extends StatelessWidget {
   }
 }
 
+/// Reasoning stays out of the answer but never out of sight: one quiet line
+/// that expands in place.
 class _ThinkingBlock extends StatefulWidget {
   const _ThinkingBlock({required this.reasoning, required this.live});
 
@@ -496,53 +546,56 @@ class _ThinkingBlockState extends State<_ThinkingBlock> {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final style = theme.textTheme.bodySmall?.copyWith(
+    final TextStyle? style = AppType.figure(
+      11.5,
+      height: 1.5,
       color: scheme.onSurfaceVariant,
-      fontStyle: FontStyle.italic,
-      height: 1.35,
     );
-    final label = widget.live && widget.reasoning.trim().isEmpty
+    final String label = widget.live && widget.reasoning.trim().isEmpty
         ? l10n.thinkingLive
         : l10n.thinking;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.only(bottom: AppSpace.x2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           InkWell(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(6),
             onTap: () => setState(() => _expanded = !_expanded),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Icon(
-                  widget.live ? Icons.psychology : Icons.psychology_outlined,
-                  size: 14,
-                  color: scheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: 5),
-                Flexible(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: style?.copyWith(fontStyle: FontStyle.normal),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  StatusDot(
+                    color: widget.live
+                        ? scheme.primary
+                        : scheme.onSurfaceVariant.withValues(alpha: 0.5),
+                    size: 5,
                   ),
-                ),
-                Icon(
-                  _expanded ? Icons.expand_less : Icons.expand_more,
-                  size: 16,
-                  color: scheme.onSurfaceVariant,
-                ),
-              ],
+                  const SizedBox(width: AppSpace.x2),
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: style,
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  Icon(
+                    _expanded ? Icons.expand_less : Icons.expand_more,
+                    size: 14,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ],
+              ),
             ),
           ),
-          if (!_expanded &&
-              widget.live &&
-              widget.reasoning.trim().isNotEmpty)
+          if (!_expanded && widget.live && widget.reasoning.trim().isNotEmpty)
             Padding(
-              padding: const EdgeInsets.only(top: 2, left: 2),
+              padding: const EdgeInsets.only(top: 2),
               child: Text(
                 widget.reasoning.trim().split('\n').last.trim(),
                 maxLines: 1,
@@ -550,16 +603,13 @@ class _ThinkingBlockState extends State<_ThinkingBlock> {
                 style: style,
               ),
             ),
-          if (_expanded && widget.reasoning.trim().isNotEmpty)
+          if (_expanded)
             Container(
-              width: double.infinity,
-              margin: const EdgeInsets.only(top: 4),
-              padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+              margin: const EdgeInsets.only(top: AppSpace.x1),
+              padding: const EdgeInsets.only(left: AppSpace.x3),
               decoration: BoxDecoration(
-                color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: scheme.outlineVariant.withValues(alpha: 0.5),
+                border: Border(
+                  left: BorderSide(color: scheme.outlineVariant),
                 ),
               ),
               child: Text(widget.reasoning.trim(), style: style),

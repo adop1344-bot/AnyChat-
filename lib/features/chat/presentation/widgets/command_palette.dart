@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_tokens.dart';
+
 class ChatCommand {
   const ChatCommand(this.name, this.description);
 
@@ -15,6 +17,7 @@ const List<ChatCommand> kChatCommands = <ChatCommand>[
   ChatCommand('/help', 'список команд'),
 ];
 
+/// Command palette: a hairline list above the composer, mono command names.
 class CommandPalette extends StatelessWidget {
   const CommandPalette({super.key, required this.onPick});
 
@@ -22,50 +25,73 @@ class CommandPalette extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
     return Container(
-      margin: const EdgeInsets.fromLTRB(8, 0, 8, 4),
+      margin: const EdgeInsets.fromLTRB(
+        AppSpace.x3,
+        0,
+        AppSpace.x3,
+        AppSpace.x1,
+      ),
       constraints: const BoxConstraints(maxHeight: 220),
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: scheme.outlineVariant),
       ),
       child: ListView.builder(
         shrinkWrap: true,
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(vertical: AppSpace.x1),
         itemCount: kChatCommands.length,
         itemBuilder: (BuildContext context, int index) {
-          final cmd = kChatCommands[index];
-          return ListTile(
-            dense: true,
-            leading: Icon(
-              switch (cmd.name) {
-                '/widget' => Icons.widgets_outlined,
-                '/search' => Icons.search,
-                '/end' => Icons.all_inclusive,
-                '/stop' => Icons.stop,
-                _ => Icons.help_outline,
-              },
-              size: 20,
-              color: scheme.primary,
-            ),
-            title: Text(
-              cmd.name,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            subtitle: Text(
-              cmd.description,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+          final ChatCommand cmd = kChatCommands[index];
+          return InkWell(
             onTap: () => onPick(cmd.name),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpace.x3,
+                vertical: AppSpace.x2,
+              ),
+              child: Row(
+                children: <Widget>[
+                  SizedBox(
+                    width: 16,
+                    child: Icon(
+                      switch (cmd.name) {
+                        '/widget' => Icons.widgets_outlined,
+                        '/search' => Icons.search,
+                        '/end' => Icons.all_inclusive,
+                        '/stop' => Icons.stop,
+                        _ => Icons.help_outline,
+                      },
+                      size: 13,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpace.x2),
+                  SizedBox(
+                    width: 68,
+                    child: Text(
+                      cmd.name,
+                      style: AppType.figure(
+                        12,
+                        weight: FontWeight.w500,
+                        color: scheme.onSurface,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      cmd.description,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           );
         },
       ),

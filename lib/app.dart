@@ -12,8 +12,6 @@ import 'l10n/app_localizations.dart';
 class AnyChatApp extends ConsumerWidget {
   const AnyChatApp({super.key});
 
-  static const Color _seed = Color(0xFF6750A4);
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settingsAsync = ref.watch(settingsControllerProvider);
@@ -23,31 +21,29 @@ class AnyChatApp extends ConsumerWidget {
       error: (Object error, StackTrace stack) => const AppSettings(),
     );
     return DynamicColorBuilder(
-      builder: (lightDynamic, darkDynamic) {
-        final lightSeed = lightDynamic?.primary;
-        final darkSeed = darkDynamic?.primary;
-        return _buildApp(settings, lightSeed, darkSeed);
+      builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
+        return _buildApp(settings, lightDynamic, darkDynamic);
       },
     );
   }
 
   Widget _buildApp(
     AppSettings settings,
-    Color? lightSeed,
-    Color? darkSeed,
+    ColorScheme? lightDynamic,
+    ColorScheme? darkDynamic,
   ) {
-    final manualAccent = kAccentColors[settings.accentColor];
-    final fallback = manualAccent ?? _seed;
-    final light =
-        manualAccent?.harmonizeWith(lightSeed ?? fallback) ?? lightSeed ?? fallback;
-    final dark =
-        manualAccent?.harmonizeWith(darkSeed ?? fallback) ?? darkSeed ?? fallback;
-    final localeCode = settings.localeCode;
+    // A picked colour wins. Otherwise the wallpaper's primary is used as the
+    // accent only - surfaces stay neutral either way.
+    final Color? manual = kAccentColors[settings.accentColor];
+    final Color lightAccent = manual ?? lightDynamic?.primary ?? kDefaultAccent;
+    final Color darkAccent = manual ?? darkDynamic?.primary ?? kDefaultAccent;
+    final String? localeCode = settings.localeCode;
+
     return MaterialApp(
       title: 'AnyChat+',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(light),
-      darkTheme: AppTheme.dark(dark),
+      theme: AppTheme.light(lightAccent),
+      darkTheme: AppTheme.dark(darkAccent),
       themeMode: _themeMode(settings.themeMode),
       locale: localeCode == null ? null : Locale(localeCode),
       supportedLocales: AppLocalizations.supportedLocales,

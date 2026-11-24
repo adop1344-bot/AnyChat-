@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/storage/token_estimator.dart';
@@ -8,6 +9,7 @@ import '../../../providers/domain/model_info.dart';
 import '../../../providers/state/providers_state.dart';
 import '../../../settings/app_settings.dart';
 import '../../../settings/state/settings_controller.dart';
+import '../../../../core/theme/app_tokens.dart';
 
 class ModelPickerSheet extends ConsumerStatefulWidget {
   const ModelPickerSheet({super.key});
@@ -68,7 +70,7 @@ class _ModelPickerSheetState extends ConsumerState<ModelPickerSheet> {
                 isDense: true,
                 filled: true,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(28),
+                  borderRadius: BorderRadius.circular(AppRadius.control),
                   borderSide: BorderSide.none,
                 ),
               ),
@@ -207,7 +209,7 @@ class _ModelCard extends ConsumerWidget {
         color: selected
             ? theme.colorScheme.primary
             : theme.colorScheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadius.card),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () {
@@ -451,13 +453,13 @@ class _ProviderPill extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: InkWell(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(AppRadius.control),
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
             color: active ? theme.colorScheme.primary : Colors.transparent,
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(AppRadius.control),
             border: active
                 ? null
                 : Border.all(color: theme.colorScheme.outlineVariant),
@@ -511,7 +513,7 @@ class CurrentModelChip extends ConsumerWidget {
           error: (Object error, StackTrace stack) => const AppSettings(),
         );
     return InkWell(
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(AppRadius.control),
       onTap: () => ModelPickerSheet.show(context),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -519,7 +521,7 @@ class CurrentModelChip extends ConsumerWidget {
           color: theme.colorScheme.surfaceContainerHighest.withValues(
             alpha: 0.8,
           ),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppRadius.control),
           border: Border.all(
             color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
           ),

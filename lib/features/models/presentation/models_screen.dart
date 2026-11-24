@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app_providers.dart';
@@ -11,6 +12,7 @@ import '../../providers/presentation/providers_screen.dart';
 import '../../providers/state/providers_state.dart';
 import '../../settings/app_settings.dart';
 import '../../settings/state/settings_controller.dart';
+import '../../../core/theme/app_tokens.dart';
 
 class ModelsScreen extends ConsumerStatefulWidget {
   const ModelsScreen({super.key});
@@ -232,7 +234,7 @@ class _ModelsScreenState extends ConsumerState<ModelsScreen> {
                 isDense: true,
                 filled: true,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(28),
+                  borderRadius: BorderRadius.circular(AppRadius.control),
                   borderSide: BorderSide.none,
                 ),
               ),
@@ -291,7 +293,7 @@ class _ModelsScreenState extends ConsumerState<ModelsScreen> {
                       labelText: l10n.customModelLabel,
                       isDense: true,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(28),
+                        borderRadius: BorderRadius.circular(AppRadius.control),
                         borderSide: BorderSide.none,
                       ),
                     ),

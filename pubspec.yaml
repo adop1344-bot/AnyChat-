@@ -39,3 +39,12 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   generate: true
+  fonts:
+    - family: PlexSans
+      fonts:
+        - asset: assets/fonts/PlexSans.ttf
+    - family: PlexMono
+      fonts:
+        - asset: assets/fonts/PlexMono-Regular.ttf
+        - asset: assets/fonts/PlexMono-Medium.ttf
+          weight: 500

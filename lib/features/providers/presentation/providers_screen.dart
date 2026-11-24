@@ -478,20 +478,20 @@ class _HealthBadge extends ConsumerWidget {
     final String label;
     final value = health.value;
     if (health.hasError || (value != null && value.state == ProviderHealthState.down)) {
-      color = const Color(0xFFE53935);
+      color = Theme.of(context).colorScheme.error;
       label = l10n.providerHealthOffline;
     } else if (value == null) {
-      color = Colors.grey;
+      color = Theme.of(context).colorScheme.onSurfaceVariant;
       label = '…';
     } else {
       switch (value.state) {
         case ProviderHealthState.ok:
-          color = const Color(0xFF43A047);
+          color = const Color(0xFF3E9B62);
         case ProviderHealthState.reachable:
-          color = const Color(0xFFFB8C00);
+          color = const Color(0xFFC08A2E);
         case ProviderHealthState.down:
         case ProviderHealthState.unknown:
-          color = Colors.grey;
+          color = Theme.of(context).colorScheme.onSurfaceVariant;
       }
       label = value.state == ProviderHealthState.unknown
           ? l10n.providerHealthOffline

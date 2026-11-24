@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:markdown/markdown.dart' as md;
 
+import '../../../../core/theme/app_tokens.dart';
+
 import '../../../../l10n/app_localizations.dart';
 import 'html_preview_screen.dart';
 
@@ -200,18 +202,19 @@ class _CodeBlockCardState extends State<CodeBlockCard> {
         : lines;
     final isHtml = widget.language == 'html' || widget.language == 'htm';
 
-    final codeStyle = theme.textTheme.bodySmall?.copyWith(
-      fontFamily: 'monospace',
-      height: 1.45,
+    final TextStyle codeStyle = AppType.figure(
+      12.5,
+      height: 1.5,
+      color: scheme.onSurface,
     );
 
     return Container(
       width: double.infinity,
       clipBehavior: Clip.antiAlias,
-      margin: const EdgeInsets.symmetric(vertical: 4),
+      margin: const EdgeInsets.symmetric(vertical: AppSpace.x2),
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(14),
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(AppRadius.card),
         border: Border.all(color: scheme.outlineVariant),
       ),
       child: Column(
@@ -224,7 +227,7 @@ class _CodeBlockCardState extends State<CodeBlockCard> {
                 bottom: BorderSide(color: scheme.outlineVariant),
               ),
             ),
-            padding: const EdgeInsets.fromLTRB(12, 2, 4, 2),
+            padding: const EdgeInsets.fromLTRB(AppSpace.x3, 2, 4, 2),
             child: Row(
               children: <Widget>[
                 if (widget.language.isNotEmpty)
@@ -232,9 +235,10 @@ class _CodeBlockCardState extends State<CodeBlockCard> {
                     padding: const EdgeInsets.only(right: 4),
                     child: Text(
                       widget.language,
-                      style: theme.textTheme.labelSmall?.copyWith(
+                      style: AppType.figure(
+                        11,
+                        weight: FontWeight.w500,
                         color: scheme.onSurfaceVariant,
-                        letterSpacing: 0.4,
                       ),
                     ),
                   ),
@@ -259,7 +263,12 @@ class _CodeBlockCardState extends State<CodeBlockCard> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpace.x3,
+              AppSpace.x3,
+              AppSpace.x3,
+              AppSpace.x2,
+            ),
             child: AnimatedSize(
               duration: const Duration(milliseconds: 180),
               alignment: Alignment.topLeft,
@@ -283,10 +292,8 @@ class _CodeBlockCardState extends State<CodeBlockCard> {
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
                               colors: <Color>[
-                                scheme.surfaceContainerHighest.withValues(
-                                  alpha: 0,
-                                ),
-                                scheme.surfaceContainerHighest,
+                                scheme.surface.withValues(alpha: 0),
+                                scheme.surface,
                               ],
                             ),
                           ),

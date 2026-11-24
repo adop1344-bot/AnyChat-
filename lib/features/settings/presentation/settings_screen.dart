@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../core/tools/termux_shell.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -13,6 +14,8 @@ import '../../providers/presentation/providers_screen.dart';
 import '../../providers/state/providers_state.dart';
 import '../app_settings.dart';
 import '../state/settings_controller.dart';
+import '../../../core/theme/app_tokens.dart';
+import '../../../core/ui/atoms.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -182,7 +185,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Tooltip(
       message: label,
       child: InkWell(
-        borderRadius: BorderRadius.circular(26),
+        borderRadius: BorderRadius.circular(AppRadius.control),
         onTap: () => _controller.setAccentColor(key),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
@@ -245,7 +248,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.settingsTitle)),
       body: ListView(
-        padding: const EdgeInsets.only(bottom: 32),
+        padding: const EdgeInsets.only(bottom: AppSpace.x10),
         children: <Widget>[
           _section(
             context,
@@ -557,29 +560,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  /// Settings read as one continuous sheet: a quiet label, the rows, a rule.
+  /// No card per section, so the eye follows the words, not the boxes.
   Widget _section(BuildContext context, String title, List<Widget> children) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            title,
-            style: theme.textTheme.titleSmall?.copyWith(
-              color: theme.colorScheme.primary,
-            ),
+    final ThemeData theme = Theme.of(context);
+    final List<Widget> rows = <Widget>[];
+    for (var i = 0; i < children.length; i++) {
+      rows.add(children[i]);
+      if (i != children.length - 1) {
+        rows.add(
+          Padding(
+            padding: const EdgeInsets.only(left: AppSpace.x4),
+            child: Hairline(color: theme.colorScheme.outlineVariant),
           ),
-          const SizedBox(height: 8),
-          Card(
-            margin: EdgeInsets.zero,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              child: Column(children: children),
-            ),
-          ),
-        ],
-      ),
+        );
+      }
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        SectionLabel(title),
+        ...rows,
+      ],
     );
   }
 }

@@ -1,11 +1,13 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+
 import 'package:image_picker/image_picker.dart';
 import 'package:photo_manager/photo_manager.dart';
 
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/models.dart';
+import '../../../../core/theme/app_tokens.dart';
 
 class AttachmentSheet extends StatefulWidget {
   const AttachmentSheet({
@@ -322,10 +324,10 @@ class _SourceButton extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Material(
       color: scheme.surfaceContainerHighest,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(AppRadius.card),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadius.card),
         child: SizedBox(
           height: 68,
           child: Column(
