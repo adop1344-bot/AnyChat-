@@ -1,7 +1,7 @@
 name: anychat
 description: AnyChat - a personal LLM chat client with transparent context control.
 publish_to: "none"
-version: 1.0.0+1
+version: 2.0.0+11
 
 environment:
   sdk: ^3.13.0
