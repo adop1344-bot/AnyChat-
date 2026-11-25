@@ -146,7 +146,7 @@ class SoftSwap extends StatelessWidget {
         alignment: alignment,
         children: <Widget>[
           ...previous,
-          if (current != null) current,
+          ?current,
         ],
       ),
       transitionBuilder: (Widget child, Animation<double> animation) =>
