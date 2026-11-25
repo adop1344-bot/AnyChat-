@@ -179,37 +179,72 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         return Scaffold(
           drawer: const ChatDrawer(),
           body: Builder(
-            builder: (BuildContext scaffoldContext) => SafeArea(
-              bottom: false,
-              child: Column(
-                children: <Widget>[
-                  _ChatTopBar(
-                    title: chat.title,
-                    onMenu: () => Scaffold.of(scaffoldContext).openDrawer(),
-                    onNewChat: _startNewChat,
+            builder: (BuildContext scaffoldContext) {
+              final bool glass = StyleTokens.of(context).glass;
+              final Widget bar = _ChatTopBar(
+                title: chat.title,
+                onMenu: () => Scaffold.of(scaffoldContext).openDrawer(),
+                onNewChat: _startNewChat,
+              );
+              final Widget transcript = messagesAsync.when(
+                loading: () =>
+                    const Center(child: CircularProgressIndicator()),
+                error: (Object error, StackTrace stack) => Center(
+                  child: Text(l10n.errUnknown('$error')),
+                ),
+                data: (List<Message> allMessages) => _buildChatBody(
+                  l10n,
+                  chat,
+                  allMessages,
+                  branches,
+                  session,
+                  // On glass the chrome floats, so the body must not lay out
+                  // its own strip and must start below the floating bar.
+                  floatingChrome: glass,
+                ),
+              );
+
+              if (!glass) {
+                return SafeArea(
+                  bottom: false,
+                  child: Column(
+                    children: <Widget>[
+                      bar,
+                      if (session.busy)
+                        const LinearProgressIndicator(minHeight: 2),
+                      Expanded(child: transcript),
+                    ],
                   ),
-                  if (session.busy)
-                    const LinearProgressIndicator(minHeight: 2),
-                  Expanded(
-                    child: messagesAsync.when(
-                      loading: () => const Center(
-                        child: CircularProgressIndicator(),
-                      ),
-                      error: (Object error, StackTrace stack) => Center(
-                        child: Text(l10n.errUnknown('$error')),
-                      ),
-                      data: (List<Message> allMessages) => _buildChatBody(
-                        l10n,
-                        chat,
-                        allMessages,
-                        branches,
-                        session,
+                );
+              }
+
+              return SafeArea(
+                bottom: false,
+                child: Stack(
+                  children: <Widget>[
+                    Positioned.fill(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 56),
+                        child: transcript,
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          bar,
+                          if (session.busy)
+                            const LinearProgressIndicator(minHeight: 2),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
         );
       },
@@ -221,8 +256,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     Chat chat,
     List<Message> allMessages,
     List<Branch> branches,
-    ChatSessionState session,
-  ) {
+    ChatSessionState session, {
+    bool floatingChrome = false,
+  }) {
     final branchId = chat.activeBranchId;
     final messages = branchId == null
         ? <Message>[]
@@ -284,23 +320,44 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     return Column(
       children: <Widget>[
-        _ContextStrip(
-          used: usage.used,
-          limit: usage.limit,
-          approximate: usage.approximate,
-          onModelTap: () => ModelPickerSheet.show(context),
-          onTap: () => _showContextStats(
-            l10n,
-            chat,
-            usage.used,
-            usage.limit,
-            usage.approximate,
+        // Glass floats the strip over the transcript, right under the bar.
+        if (!floatingChrome)
+          _ContextStrip(
+            used: usage.used,
+            limit: usage.limit,
+            approximate: usage.approximate,
+            onModelTap: () => ModelPickerSheet.show(context),
+            onTap: () => _showContextStats(
+              l10n,
+              chat,
+              usage.used,
+              usage.limit,
+              usage.approximate,
+            ),
           ),
-        ),
         if (session.toolNotice.isNotEmpty) _ToolNotice(text: session.toolNotice),
         Expanded(
           child: Stack(
             children: <Widget>[
+              if (floatingChrome)
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: _ContextStrip(
+                    used: usage.used,
+                    limit: usage.limit,
+                    approximate: usage.approximate,
+                    onModelTap: () => ModelPickerSheet.show(context),
+                    onTap: () => _showContextStats(
+                      l10n,
+                      chat,
+                      usage.used,
+                      usage.limit,
+                      usage.approximate,
+                    ),
+                  ),
+                ),
               messages.isEmpty
                   ? _EmptyChat(
                       l10n: l10n,
@@ -311,7 +368,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   : ListView.builder(
                       controller: _scroll,
                       reverse: true,
-                      padding: const EdgeInsets.only(top: 12, bottom: 12),
+                      padding: EdgeInsets.only(
+                        top: floatingChrome ? 58 : 12,
+                        // Content runs under the floating glass composer, so
+                        // the pane has real text to blur.
+                        bottom: StyleTokens.of(context).glass ? 118 : 12,
+                      ),
                       itemCount: reversed.length,
                       itemBuilder: (BuildContext itemContext, int index) {
                         final message = reversed[index];
@@ -373,10 +435,45 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             : bubble;
                       },
                     ),
+              // The composer floats over the transcript. On the glass style
+              // that is what gives the pane something to refract.
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    if (_palettePrefix != null)
+                      CommandPalette(
+                        onPick: (String cmd) {
+                          _inputController.text = '$cmd ';
+                          _inputController.selection = TextSelection.fromPosition(
+                            TextPosition(offset: _inputController.text.length),
+                          );
+                          setState(() => _palettePrefix = null);
+                        },
+                      ),
+                    ChatComposer(
+                      controller: _inputController,
+                      onTextChanged: _onInputChanged,
+                      isBusy: session.isStreaming || session.busy,
+                      onStop: () =>
+                          ref.read(chatSessionProvider.notifier).stop(),
+                      onSend: (String text, List<ChatAttachment> attachments) =>
+                          ref.read(chatSessionProvider.notifier).send(
+                                widget.chatId,
+                                text,
+                                attachments: attachments,
+                              ),
+                    ),
+                  ],
+                ),
+              ),
               if (_showJump)
                 Positioned(
                   right: AppSpace.x4,
-                  bottom: AppSpace.x4,
+                  bottom: StyleTokens.of(context).glass ? 116 : AppSpace.x4,
                   child: _JumpButton(
                     onTap: () => _scroll.animateTo(
                       0,
@@ -387,28 +484,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ),
             ],
           ),
-        ),
-        if (_palettePrefix != null)
-          CommandPalette(
-            onPick: (String cmd) {
-              _inputController.text = '$cmd ';
-              _inputController.selection = TextSelection.fromPosition(
-                TextPosition(offset: _inputController.text.length),
-              );
-              setState(() => _palettePrefix = null);
-            },
-          ),
-        ChatComposer(
-          controller: _inputController,
-          onTextChanged: _onInputChanged,
-          isBusy: session.isStreaming || session.busy,
-          onStop: () => ref.read(chatSessionProvider.notifier).stop(),
-          onSend: (String text, List<ChatAttachment> attachments) =>
-              ref.read(chatSessionProvider.notifier).send(
-                    widget.chatId,
-                    text,
-                    attachments: attachments,
-                  ),
         ),
       ],
     );

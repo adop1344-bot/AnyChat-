@@ -35,14 +35,14 @@ class _Field extends StatelessWidget {
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final Color top = isDark
-        ? Color.alphaBlend(scheme.primary.withValues(alpha: 0.30),
+        ? Color.alphaBlend(scheme.primary.withValues(alpha: 0.45),
             const Color(0xFF0B0D12))
-        : Color.alphaBlend(scheme.primary.withValues(alpha: 0.16),
+        : Color.alphaBlend(scheme.primary.withValues(alpha: 0.24),
             const Color(0xFFF4F6FB));
     final Color bottom = isDark
-        ? Color.alphaBlend(scheme.tertiary.withValues(alpha: 0.26),
+        ? Color.alphaBlend(scheme.tertiary.withValues(alpha: 0.40),
             const Color(0xFF101319))
-        : Color.alphaBlend(scheme.tertiary.withValues(alpha: 0.14),
+        : Color.alphaBlend(scheme.tertiary.withValues(alpha: 0.22),
             const Color(0xFFEDF1F8));
 
     return DecoratedBox(
@@ -58,17 +58,17 @@ class _Field extends StatelessWidget {
           Positioned(
             top: -120,
             left: -80,
-            child: _Blob(color: scheme.primary, size: 380, alpha: 0.42),
+            child: _Blob(color: scheme.primary, size: 420, alpha: 0.55),
           ),
           Positioned(
             top: 240,
             right: -140,
-            child: _Blob(color: scheme.tertiary, size: 420, alpha: 0.34),
+            child: _Blob(color: scheme.tertiary, size: 460, alpha: 0.46),
           ),
           Positioned(
             bottom: -160,
             left: 40,
-            child: _Blob(color: scheme.secondary, size: 360, alpha: 0.28),
+            child: _Blob(color: scheme.secondary, size: 400, alpha: 0.38),
           ),
         ],
       ),
@@ -158,8 +158,13 @@ class GlassSurface extends StatelessWidget {
       child: ClipRRect(
         borderRadius: shape,
         child: BackdropFilter(
+          // Blur plus a saturation lift: real glass bends colour, so what is
+          // behind the pane comes through richer instead of just smeared.
           filter: ui.ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-          child: Container(
+          blendMode: BlendMode.srcOver,
+          child: ColorFiltered(
+            colorFilter: ColorFilter.matrix(_glassSaturation(isDark ? 1.35 : 1.25)),
+            child: Container(
             padding: padding,
             decoration: BoxDecoration(
               borderRadius: shape,
@@ -168,8 +173,8 @@ class GlassSurface extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: <Color>[
-                  Colors.white.withValues(alpha: isDark ? 0.17 : 0.58),
-                  Colors.white.withValues(alpha: isDark ? 0.05 : 0.26),
+                  Colors.white.withValues(alpha: isDark ? 0.12 : 0.50),
+                  Colors.white.withValues(alpha: isDark ? 0.04 : 0.22),
                 ],
               ),
             ),
@@ -207,10 +212,19 @@ class GlassSurface extends StatelessWidget {
               ],
             ),
           ),
+          ),
         ),
       ),
     );
   }
+
+  /// Saturation matrix used to make the blurred backdrop read as glass.
+  static List<double> _glassSaturation(double s) => <double>[
+        (0.213 * (1 - s)) + s, 0.715 * (1 - s), 0.072 * (1 - s), 0, 0,
+        0.213 * (1 - s), (0.715 * (1 - s)) + s, 0.072 * (1 - s), 0, 0,
+        0.213 * (1 - s), 0.715 * (1 - s), (0.072 * (1 - s)) + s, 0, 0,
+        0, 0, 0, 1, 0,
+      ];
 }
 
 /// The specular highlight along the top edge of a glass control.
