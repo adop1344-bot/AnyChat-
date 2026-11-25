@@ -5,6 +5,7 @@ import '../../../core/errors/error_localizer.dart';
 import '../../../core/storage/token_estimator.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/ui/atoms.dart';
+import '../../../core/ui/motion.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../home/chat_drawer.dart';
 import '../../settings/app_settings.dart';
@@ -339,7 +340,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 : null,
                           );
                         }
-                        return MessageBubble(
+                        final Widget bubble = MessageBubble(
                           message: message,
                           streamingText: session.streamText,
                           streamingReasoning: session.streamReasoning,
@@ -363,6 +364,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               : null,
                           branchPager: branchPager,
                         );
+                        // Only the newest answer rises in; older ones are
+                        // already in place when you scroll back.
+                        return isLast
+                            ? Appear(rise: 6, child: bubble)
+                            : bubble;
                       },
                     ),
               if (_showJump)
@@ -654,13 +660,17 @@ class _ContextStrip extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: <Widget>[
                     Flexible(
-                      child: Text(
-                        modelLabel,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppType.figure(
-                          11,
-                          color: theme.colorScheme.onSurfaceVariant,
+                      child: SoftSwap(
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          modelLabel,
+                          key: ValueKey<String>(modelLabel),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppType.figure(
+                            11,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
                         ),
                       ),
                     ),
@@ -771,7 +781,9 @@ class _EmptyChat extends StatelessWidget {
       l10n.suggest3,
     ];
     return SingleChildScrollView(
-      child: Padding(
+      child: Appear(
+        rise: 10,
+        child: Padding(
         padding: const EdgeInsets.fromLTRB(
           AppSpace.x4,
           AppSpace.x10,
@@ -815,6 +827,7 @@ class _EmptyChat extends StatelessWidget {
               ),
           ],
         ),
+      ),
       ),
     );
   }

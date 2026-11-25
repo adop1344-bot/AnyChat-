@@ -8,6 +8,8 @@ import '../../../core/theme/accent_colors.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/tools/termux_shell.dart';
 import '../../../core/ui/atoms.dart';
+import '../../../core/ui/motion.dart';
+import '../../../core/ui/style_switch.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../models/presentation/models_screen.dart';
 import '../../providers/domain/custom_provider.dart';
@@ -241,7 +243,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
             ),
           ),
-          _Group(
+          Appear(
+            delay: const Duration(milliseconds: 40),
+            child: _Group(
             label: l10n.generateSection,
             children: <Widget>[
               _SwitchRow(
@@ -270,8 +274,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 onChanged: (String value) => _controller.setSystemPrompt(value),
               ),
             ],
+            ),
           ),
-          _Group(
+          Appear(
+            delay: const Duration(milliseconds: 80),
+            child: _Group(
             label: l10n.advancedSettings,
             children: <Widget>[
               if (efforts.isNotEmpty)
@@ -344,10 +351,35 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 placeholder: 'все',
               ),
             ],
+            ),
           ),
-          _Group(
+          Appear(
+            delay: const Duration(milliseconds: 120),
+            child: _Group(
             label: l10n.appearanceSection,
             children: <Widget>[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpace.x4,
+                  AppSpace.x3,
+                  AppSpace.x4,
+                  AppSpace.x2,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text('Стиль интерфейса', style: theme.textTheme.bodyMedium),
+                    const SizedBox(height: AppSpace.x3),
+                    StylePicker(
+                      value: appUiStyleFromName(settings.uiStyle),
+                      onChanged: (AppUiStyle style) =>
+                          _controller.setUiStyle(style.name),
+                      labelInstrument: 'Instrument',
+                      labelMaterial: 'Material You',
+                    ),
+                  ],
+                ),
+              ),
               _DropdownRow<String>(
                 label: l10n.language,
                 value: settings.localeCode ?? 'auto',
@@ -447,17 +479,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
               ),
             ],
+            ),
           ),
-          _Group(
-            label: l10n.debugLog,
-            children: <Widget>[
-              _ActionRow(
-                title: l10n.debugLog,
-                hint: 'Запросы, ответы и ошибки провайдера',
-                icon: Icons.chevron_right,
-                onTap: _showDebugLog,
-              ),
-            ],
+          Appear(
+            delay: const Duration(milliseconds: 160),
+            child: _Group(
+              label: l10n.debugLog,
+              children: <Widget>[
+                _ActionRow(
+                  title: l10n.debugLog,
+                  hint: 'Запросы, ответы и ошибки провайдера',
+                  icon: Icons.chevron_right,
+                  onTap: _showDebugLog,
+                ),
+              ],
+            ),
           ),
         ],
       ),

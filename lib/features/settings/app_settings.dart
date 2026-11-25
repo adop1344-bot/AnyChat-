@@ -12,6 +12,7 @@ class AppSettings {
     this.contextLimit,
     this.historyDepth,
     this.accentColor = 'system',
+    this.uiStyle = 'instrument',
     this.reasoningEffort = '',
     this.webSearch = false,
     this.agentShell = false,
@@ -41,6 +42,9 @@ class AppSettings {
   final int? historyDepth;
 
   final String accentColor;
+
+  /// `instrument` or `material`.
+  final String uiStyle;
 
   final String reasoningEffort;
 
@@ -76,6 +80,7 @@ class AppSettings {
       contextLimit: prefs.getInt('context_limit'),
       historyDepth: prefs.getInt('history_depth'),
       accentColor: prefs.getString('accent_color') ?? 'system',
+      uiStyle: prefs.getString('ui_style') ?? 'instrument',
       reasoningEffort: prefs.getString('reasoning_effort') ?? '',
       webSearch: prefs.getBool('web_search') ?? false,
       agentShell: prefs.getBool('agent_shell') ?? false,
@@ -120,6 +125,7 @@ class AppSettings {
     Object? contextLimit = _unspecified,
     Object? historyDepth = _unspecified,
     String? accentColor,
+    String? uiStyle,
     String? reasoningEffort,
     bool? webSearch,
     bool? agentShell,
@@ -150,6 +156,7 @@ class AppSettings {
           ? this.historyDepth
           : historyDepth as int?,
       accentColor: accentColor ?? this.accentColor,
+      uiStyle: uiStyle ?? this.uiStyle,
       reasoningEffort: reasoningEffort ?? this.reasoningEffort,
       webSearch: webSearch ?? this.webSearch,
       agentShell: agentShell ?? this.agentShell,
@@ -199,6 +206,7 @@ class AppSettings {
     await _setOrNull(prefs, 'context_limit', contextLimit);
     await _setOrNull(prefs, 'history_depth', historyDepth);
     await prefs.setString('accent_color', accentColor);
+    await prefs.setString('ui_style', uiStyle);
     await prefs.setString('reasoning_effort', reasoningEffort);
     await prefs.setBool('web_search', webSearch);
     await prefs.setBool('agent_shell', agentShell);

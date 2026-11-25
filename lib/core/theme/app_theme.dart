@@ -10,9 +10,177 @@ import 'app_tokens.dart';
 class AppTheme {
   const AppTheme._();
 
-  static ThemeData light(Color accent) => _build(Brightness.light, accent);
+  static ThemeData light(Color accent, AppUiStyle style) =>
+      _for(Brightness.light, accent, style);
 
-  static ThemeData dark(Color accent) => _build(Brightness.dark, accent);
+  static ThemeData dark(Color accent, AppUiStyle style) =>
+      _for(Brightness.dark, accent, style);
+
+  static ThemeData _for(
+    Brightness brightness,
+    Color accent,
+    AppUiStyle style,
+  ) =>
+      switch (style) {
+        AppUiStyle.instrument => _build(brightness, accent),
+        AppUiStyle.material => _material(brightness, accent),
+      };
+
+  /// Material You: seeded surfaces, tonal fills, pill controls, the stock type
+  /// scale. Nothing from the instrument ramp leaks in here.
+  static ThemeData _material(Brightness brightness, Color accent) {
+    final ColorScheme scheme = ColorScheme.fromSeed(
+      seedColor: accent,
+      brightness: brightness,
+    );
+    final bool isDark = brightness == Brightness.dark;
+    final BorderRadius control = BorderRadius.circular(20);
+    final BorderRadius card = BorderRadius.circular(16);
+    final BorderRadius panel = BorderRadius.circular(28);
+
+    return ThemeData(
+      useMaterial3: true,
+      brightness: brightness,
+      colorScheme: scheme,
+      splashFactory: InkSparkle.splashFactory,
+      scaffoldBackgroundColor:
+          isDark ? scheme.surfaceContainerLowest : scheme.surface,
+      appBarTheme: AppBarTheme(
+        backgroundColor: scheme.surface,
+        foregroundColor: scheme.onSurface,
+        surfaceTintColor: scheme.surfaceTint,
+        elevation: 0,
+        scrolledUnderElevation: 3,
+        centerTitle: false,
+        titleTextStyle: TextStyle(
+          fontSize: 22,
+          fontWeight: FontWeight.w400,
+          color: scheme.onSurface,
+        ),
+      ),
+      cardTheme: CardThemeData(
+        elevation: 0,
+        color: scheme.surfaceContainerLow,
+        surfaceTintColor: Colors.transparent,
+        margin: EdgeInsets.zero,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(borderRadius: card),
+      ),
+      dividerTheme: DividerThemeData(
+        color: scheme.outlineVariant,
+        thickness: 1,
+        space: 1,
+      ),
+      listTileTheme: ListTileThemeData(
+        iconColor: scheme.onSurfaceVariant,
+        shape: RoundedRectangleBorder(borderRadius: control),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: scheme.surfaceContainerHigh,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: panel),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: scheme.surfaceContainerLow,
+        surfaceTintColor: Colors.transparent,
+        modalBackgroundColor: scheme.surfaceContainerLow,
+        elevation: 0,
+        showDragHandle: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: scheme.inverseSurface,
+        contentTextStyle: TextStyle(color: scheme.onInverseSurface),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: scheme.surfaceContainerHighest.withValues(
+          alpha: isDark ? 0.35 : 0.55,
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: control,
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: control,
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: control,
+          borderSide: BorderSide(color: scheme.primary, width: 2),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          minimumSize: const Size(0, 44),
+          shape: RoundedRectangleBorder(borderRadius: control),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          minimumSize: const Size(0, 40),
+          shape: RoundedRectangleBorder(borderRadius: control),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(0, 44),
+          shape: RoundedRectangleBorder(borderRadius: control),
+        ),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          shape: RoundedRectangleBorder(borderRadius: control),
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: scheme.surfaceContainerLow,
+        selectedColor: scheme.secondaryContainer,
+        side: BorderSide(color: scheme.outlineVariant),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: scheme.surfaceContainerHigh,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: card),
+      ),
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: scheme.primary,
+        linearTrackColor: scheme.surfaceContainerHighest,
+        circularTrackColor: scheme.surfaceContainerHighest,
+        linearMinHeight: 2,
+      ),
+      drawerTheme: DrawerThemeData(
+        backgroundColor: scheme.surfaceContainerLow,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        width: 300,
+        shape: const RoundedRectangleBorder(),
+      ),
+      tooltipTheme: TooltipThemeData(
+        decoration: BoxDecoration(
+          color: scheme.inverseSurface,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        textStyle: TextStyle(color: scheme.onInverseSurface),
+      ),
+    );
+  }
 
   static ThemeData _build(Brightness brightness, Color accent) {
     final bool isDark = brightness == Brightness.dark;

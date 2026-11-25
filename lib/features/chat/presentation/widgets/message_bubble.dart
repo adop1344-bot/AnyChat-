@@ -8,6 +8,7 @@ import '../../../../core/errors/error_localizer.dart';
 import '../../../../core/storage/token_estimator.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/ui/atoms.dart';
+import '../../../../core/ui/motion.dart';
 import '../../domain/models.dart';
 import '../../../../l10n/app_localizations.dart';
 import 'attachment_view.dart';
@@ -484,7 +485,7 @@ class _MessageBody extends StatelessWidget {
       );
     }
     final data = streaming ? '$content▌' : content;
-    return SelectionArea(
+    final Widget body = SelectionArea(
       child: MarkdownBody(
         data: data,
         onTapLink: (String text, String? href, String title) =>
@@ -534,6 +535,10 @@ class _MessageBody extends StatelessWidget {
         ),
       ),
     );
+    if (!streaming) return body;
+    // Every chunk dims the block for a moment and lets it settle back, so the
+    // answer grows smoothly instead of stepping.
+    return StreamFade(trigger: content, child: body);
   }
 
   static Future<void> _openLink(BuildContext context, String? href) async {
@@ -608,10 +613,15 @@ class _ThinkingBlockState extends State<_ThinkingBlock> {
                     ),
                   ),
                   const SizedBox(width: 2),
-                  Icon(
-                    _expanded ? Icons.expand_less : Icons.expand_more,
-                    size: 14,
-                    color: scheme.onSurfaceVariant,
+                  AnimatedRotation(
+                    duration: AppMotion.fast,
+                    curve: AppMotion.curve,
+                    turns: _expanded ? 0.5 : 0,
+                    child: Icon(
+                      Icons.expand_more,
+                      size: 14,
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
@@ -627,8 +637,12 @@ class _ThinkingBlockState extends State<_ThinkingBlock> {
                 style: style,
               ),
             ),
-          if (_expanded)
-            Container(
+          AnimatedSize(
+            duration: AppMotion.base,
+            curve: AppMotion.curve,
+            alignment: Alignment.topLeft,
+            child: _expanded
+                ? Container(
               margin: const EdgeInsets.only(top: AppSpace.x1),
               padding: const EdgeInsets.only(left: AppSpace.x3),
               decoration: BoxDecoration(
@@ -637,7 +651,9 @@ class _ThinkingBlockState extends State<_ThinkingBlock> {
                 ),
               ),
               child: Text(widget.reasoning.trim(), style: style),
-            ),
+            )
+                : const SizedBox(width: double.infinity),
+          ),
         ],
       ),
     );

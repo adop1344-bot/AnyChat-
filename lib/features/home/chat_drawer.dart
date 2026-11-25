@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app_providers.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../core/ui/atoms.dart';
+import '../../core/ui/motion.dart';
 import '../../l10n/app_localizations.dart';
 import '../settings/presentation/settings_screen.dart';
 import '../chat/domain/models.dart';
@@ -181,7 +182,12 @@ class _ChatDrawerState extends ConsumerState<ChatDrawer> {
                           itemCount: chats.length,
                           itemBuilder: (BuildContext ctx, int index) {
                             final chat = chats[index];
-                            return _ChatRow(
+                            return Appear(
+                              delay: Duration(
+                                milliseconds: (index * 18).clamp(0, 180).toInt(),
+                              ),
+                              rise: 6,
+                              child: _ChatRow(
                               chat: chat,
                               selected: chat.id == currentId,
                               pinned: pinned.contains(chat.id),
@@ -210,6 +216,7 @@ class _ChatDrawerState extends ConsumerState<ChatDrawer> {
                                     );
                                 }
                               },
+                              ),
                             );
                           },
                         ),

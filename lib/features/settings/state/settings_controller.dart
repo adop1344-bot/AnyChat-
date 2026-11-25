@@ -53,6 +53,9 @@ class SettingsController extends _$SettingsController {
   Future<void> setAccentColor(String value) =>
       _update((s) => s.copyWith(accentColor: value));
 
+  Future<void> setUiStyle(String value) =>
+      _update((s) => s.copyWith(uiStyle: value));
+
   Future<void> setReasoningEffort(String value) =>
       _update((s) => s.copyWith(reasoningEffort: value));
 

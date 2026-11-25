@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/theme/accent_colors.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/app_tokens.dart';
 import 'features/home/main_shell.dart';
 import 'features/settings/app_settings.dart';
 import 'features/settings/state/settings_controller.dart';
@@ -39,13 +40,16 @@ class AnyChatApp extends ConsumerWidget {
     final Color? manual = kAccentColors[settings.accentColor];
     final Color lightAccent = manual ?? dynamicLight ?? kDefaultAccent;
     final Color darkAccent = manual ?? dynamicDark ?? kDefaultAccent;
+    final AppUiStyle style = appUiStyleFromName(settings.uiStyle);
     final String? localeCode = settings.localeCode;
 
     return MaterialApp(
       title: 'AnyChat+',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(lightAccent),
-      darkTheme: AppTheme.dark(darkAccent),
+      theme: AppTheme.light(lightAccent, style),
+      darkTheme: AppTheme.dark(darkAccent, style),
+      themeAnimationDuration: const Duration(milliseconds: 420),
+      themeAnimationCurve: AppMotion.curve,
       themeMode: _themeMode(settings.themeMode),
       locale: localeCode == null ? null : Locale(localeCode),
       supportedLocales: AppLocalizations.supportedLocales,

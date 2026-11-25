@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/storage/token_estimator.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/ui/atoms.dart';
+import '../../../../core/ui/motion.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../providers/domain/model_info.dart';
 import '../../domain/models.dart';
@@ -99,7 +100,11 @@ class _InputBarState extends State<InputBar> {
         borderRadius: BorderRadius.circular(AppRadius.card + 2),
         border: Border.all(color: scheme.outlineVariant),
       ),
-      child: Column(
+      child: AnimatedSize(
+        duration: AppMotion.base,
+        curve: AppMotion.curve,
+        alignment: Alignment.bottomCenter,
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
@@ -123,28 +128,51 @@ class _InputBarState extends State<InputBar> {
                 ],
               ),
             ),
-          TextField(
-            controller: widget.controller,
-            focusNode: widget.focusNode,
-            minLines: 1,
-            maxLines: 6,
-            textInputAction: TextInputAction.newline,
-            style: theme.textTheme.bodyMedium,
-            cursorColor: scheme.primary,
-            decoration: InputDecoration(
-              hintText: l10n.messageInputHint,
-              filled: false,
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
-              isCollapsed: true,
-              contentPadding: const EdgeInsets.fromLTRB(
-                AppSpace.x4,
-                AppSpace.x3 + 2,
-                AppSpace.x4,
-                AppSpace.x2,
+          Stack(
+            children: <Widget>[
+              TextField(
+                controller: widget.controller,
+                focusNode: widget.focusNode,
+                minLines: 1,
+                maxLines: 6,
+                textInputAction: TextInputAction.newline,
+                style: theme.textTheme.bodyMedium,
+                cursorColor: scheme.primary,
+                decoration: const InputDecoration(
+                  filled: false,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  isCollapsed: true,
+                  contentPadding: EdgeInsets.fromLTRB(
+                    AppSpace.x4,
+                    AppSpace.x3 + 2,
+                    AppSpace.x4,
+                    AppSpace.x2,
+                  ),
+                ),
               ),
-            ),
+              // The hint fades out as the first character lands, so typing
+              // reads as the text replacing the prompt rather than covering it.
+              Positioned(
+                left: AppSpace.x4,
+                top: AppSpace.x3 + 2,
+                right: AppSpace.x4,
+                child: IgnorePointer(
+                  child: AnimatedOpacity(
+                    duration: AppMotion.base,
+                    curve: AppMotion.curve,
+                    opacity: _hasText ? 0 : 1,
+                    child: Text(
+                      l10n.messageInputHint,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: scheme.onSurfaceVariant.withValues(alpha: 0.75),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(
@@ -172,12 +200,16 @@ class _InputBarState extends State<InputBar> {
                     box: 34,
                   ),
                 const SizedBox(width: AppSpace.x1),
-                if (_hasText)
-                  Figure(
-                    '~${formatTokenCount(tokens)} tok',
-                    size: 10.5,
-                    color: scheme.onSurfaceVariant.withValues(alpha: 0.8),
-                  ),
+                SoftSwap(
+                  child: _hasText
+                      ? Figure(
+                          '~${formatTokenCount(tokens)} tok',
+                          size: 10.5,
+                          color: scheme.onSurfaceVariant
+                              .withValues(alpha: 0.8),
+                        )
+                      : const SizedBox.shrink(),
+                ),
                 const Spacer(),
                 _SendButton(
                   busy: widget.isBusy,
@@ -191,6 +223,7 @@ class _InputBarState extends State<InputBar> {
             ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -227,7 +260,7 @@ class _SendButton extends StatelessWidget {
         onTap: busy ? onStop : (ready ? onSend : null),
         borderRadius: BorderRadius.circular(AppRadius.control),
         child: AnimatedContainer(
-          duration: AppMotion.fast,
+          duration: AppMotion.base,
           curve: AppMotion.curve,
           width: 34,
           height: 34,
@@ -235,10 +268,22 @@ class _SendButton extends StatelessWidget {
             color: background,
             borderRadius: BorderRadius.circular(AppRadius.control),
           ),
-          child: Icon(
-            busy ? Icons.stop_rounded : Icons.arrow_upward_rounded,
-            size: 18,
-            color: foreground,
+          child: AnimatedScale(
+            duration: AppMotion.base,
+            curve: AppMotion.curve,
+            scale: ready || busy ? 1 : 0.86,
+            child: AnimatedSwitcher(
+              duration: AppMotion.fast,
+              switchInCurve: AppMotion.curve,
+              transitionBuilder: (Widget child, Animation<double> animation) =>
+                  ScaleTransition(scale: animation, child: child),
+              child: Icon(
+                busy ? Icons.stop_rounded : Icons.arrow_upward_rounded,
+                key: ValueKey<bool>(busy),
+                size: 18,
+                color: foreground,
+              ),
+            ),
           ),
         ),
       ),

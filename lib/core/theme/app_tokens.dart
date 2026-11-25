@@ -56,6 +56,17 @@ class AppRamp {
   );
 }
 
+/// Two shipped looks. `instrument` is the ink-and-hairlines treatment with
+/// monospaced figures; `material` is Material You with seeded surfaces.
+enum AppUiStyle { instrument, material }
+
+AppUiStyle appUiStyleFromName(String? name) {
+  for (final AppUiStyle style in AppUiStyle.values) {
+    if (style.name == name) return style;
+  }
+  return AppUiStyle.instrument;
+}
+
 class AppRadius {
   const AppRadius._();
 

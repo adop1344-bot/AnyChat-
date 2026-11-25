@@ -107,29 +107,36 @@ class Meter extends StatelessWidget {
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final double value = ratio.isNaN ? 0 : ratio.clamp(0.0, 1.0);
-    final int filled = (value * 1000).round();
-    final int empty = 1000 - filled;
     return SizedBox(
       width: width,
       height: height,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(height / 2),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            if (filled > 0)
-              Expanded(
-                flex: filled,
-                child: ColoredBox(color: color ?? scheme.primary),
-              ),
-            if (empty > 0)
-              Expanded(
-                flex: empty,
-                child: ColoredBox(
-                  color: track ?? scheme.surfaceContainerHighest,
-                ),
-              ),
-          ],
+        child: TweenAnimationBuilder<double>(
+          tween: Tween<double>(begin: 0, end: value),
+          duration: AppMotion.slow,
+          curve: AppMotion.curve,
+          builder: (BuildContext context, double shown, Widget? child) {
+            final int filled = (shown * 1000).round();
+            final int empty = 1000 - filled;
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                if (filled > 0)
+                  Expanded(
+                    flex: filled,
+                    child: ColoredBox(color: color ?? scheme.primary),
+                  ),
+                if (empty > 0)
+                  Expanded(
+                    flex: empty,
+                    child: ColoredBox(
+                      color: track ?? scheme.surfaceContainerHighest,
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
       ),
     );
