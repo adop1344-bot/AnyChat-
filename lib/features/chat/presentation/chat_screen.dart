@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/errors/error_localizer.dart';
 import '../../../core/storage/token_estimator.dart';
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/theme/style_tokens.dart';
 import '../../../core/ui/atoms.dart';
 import '../../../core/ui/motion.dart';
 import '../../../l10n/app_localizations.dart';
@@ -555,6 +556,36 @@ class _ChatTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
+    final StyleTokens tokens = StyleTokens.of(context);
+    if (!tokens.instrument) {
+      // Material You keeps the stock app bar: larger title, tonal tint on
+      // scroll, round icon buttons.
+      return Padding(
+        padding: const EdgeInsets.only(left: 4, right: 4),
+        child: Row(
+          children: <Widget>[
+            IconButton(
+              tooltip: AppLocalizations.of(context).menu,
+              onPressed: onMenu,
+              icon: const MenuGlyph(size: 18),
+            ),
+            Expanded(
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.titleLarge?.copyWith(fontSize: 21),
+              ),
+            ),
+            IconButton.filledTonal(
+              tooltip: AppLocalizations.of(context).newChat,
+              onPressed: onNewChat,
+              icon: const Icon(Icons.add_comment_outlined, size: 18),
+            ),
+          ],
+        ),
+      );
+    }
     return Container(
       height: 56,
       decoration: BoxDecoration(
@@ -621,6 +652,106 @@ class _ContextStrip extends ConsumerWidget {
         );
     final modelLabel = settings.selectedModelId ?? '—';
 
+    final StyleTokens tokens = StyleTokens.of(context);
+    final Widget meterPart = InkWell(
+      onTap: onTap,
+      borderRadius: tokens.control,
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: tokens.instrument ? 0 : AppSpace.x2,
+          vertical: 4,
+        ),
+        child: Row(
+          children: <Widget>[
+            Meter(
+              ratio: ratio,
+              width: tokens.instrument ? 44 : 56,
+              height: tokens.instrument ? 3 : 4,
+              color: status,
+            ),
+            const SizedBox(width: AppSpace.x2),
+            Figure(
+              '$mark${formatTokenCount(used)} / ${formatTokenCount(limit)}',
+              size: 11,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ],
+        ),
+      ),
+    );
+
+    final Widget modelPart = InkWell(
+      onTap: onModelTap,
+      borderRadius: tokens.control,
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: tokens.instrument ? 0 : AppSpace.x2,
+          vertical: 4,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Flexible(
+              child: SoftSwap(
+                alignment: Alignment.centerRight,
+                child: Text(
+                  modelLabel,
+                  key: ValueKey<String>(modelLabel),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: tokens.monoFigures
+                      ? AppType.figure(
+                          11,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        )
+                      : theme.textTheme.labelMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              tokens.instrument ? Icons.unfold_more : Icons.expand_more,
+              size: tokens.instrument ? 13 : 18,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ],
+        ),
+      ),
+    );
+
+    final Widget row = Row(
+      children: <Widget>[
+        Expanded(child: meterPart),
+        const SizedBox(width: AppSpace.x2),
+        modelPart,
+      ],
+    );
+
+    if (!tokens.instrument) {
+      // Material You: a tonal chip row, not a ruled instrument line.
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpace.x3,
+          AppSpace.x2,
+          AppSpace.x3,
+          AppSpace.x1,
+        ),
+        child: Material(
+          color: theme.colorScheme.surfaceContainerLow,
+          borderRadius: tokens.card,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpace.x2,
+              vertical: 2,
+            ),
+            child: SizedBox(height: 36, child: row),
+          ),
+        ),
+      );
+    }
+
     return Container(
       height: 34,
       decoration: BoxDecoration(
@@ -629,64 +760,9 @@ class _ContextStrip extends ConsumerWidget {
           bottom: BorderSide(color: theme.colorScheme.outlineVariant),
         ),
       ),
-      child: Row(
-        children: <Widget>[
-          Expanded(
-            child: InkWell(
-              onTap: onTap,
-              child: Padding(
-                padding: const EdgeInsets.only(left: AppSpace.x4),
-                child: Row(
-                  children: <Widget>[
-                    Meter(ratio: ratio, width: 44, height: 3, color: status),
-                    const SizedBox(width: AppSpace.x2),
-                    Figure(
-                      '$mark${formatTokenCount(used)} / ${formatTokenCount(limit)}',
-                      size: 11,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: AppSpace.x2),
-          Expanded(
-            child: InkWell(
-              onTap: onModelTap,
-              child: Padding(
-                padding: const EdgeInsets.only(right: AppSpace.x4),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: <Widget>[
-                    Flexible(
-                      child: SoftSwap(
-                        alignment: Alignment.centerRight,
-                        child: Text(
-                          modelLabel,
-                          key: ValueKey<String>(modelLabel),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppType.figure(
-                            11,
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Icon(
-                      Icons.unfold_more,
-                      size: 13,
-                      color: theme.colorScheme.onSurfaceVariant
-                          .withValues(alpha: 0.7),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpace.x4),
+        child: row,
       ),
     );
   }

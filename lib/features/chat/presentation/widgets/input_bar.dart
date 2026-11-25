@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/storage/token_estimator.dart';
 import '../../../../core/theme/app_tokens.dart';
+import '../../../../core/theme/style_tokens.dart';
 import '../../../../core/ui/atoms.dart';
 import '../../../../core/ui/motion.dart';
 import '../../../../l10n/app_localizations.dart';
@@ -43,8 +44,22 @@ class InputBar extends StatefulWidget {
   State<InputBar> createState() => _InputBarState();
 }
 
-class _InputBarState extends State<InputBar> {
+class _InputBarState extends State<InputBar>
+    with SingleTickerProviderStateMixin {
   bool _hasText = false;
+  int _lastLength = 0;
+
+  /// Every inserted character dims the field for a beat and lets it settle,
+  /// so typing reads as text materialising rather than jumping in.
+  late final AnimationController _typing = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 170),
+    value: 1,
+  );
+  late final Animation<double> _typingOpacity = Tween<double>(
+    begin: 0.45,
+    end: 1,
+  ).animate(CurvedAnimation(parent: _typing, curve: AppMotion.curve));
 
   /// Reasoning is on unless the user switched it off: the lamp is lit, not
   /// coloured, so the accent stays for action.
@@ -59,17 +74,25 @@ class _InputBarState extends State<InputBar> {
   void initState() {
     super.initState();
     _hasText = widget.controller.text.trim().isNotEmpty;
+    _lastLength = widget.controller.text.length;
     widget.controller.addListener(_onTextChanged);
   }
 
   @override
   void dispose() {
     widget.controller.removeListener(_onTextChanged);
+    _typing.dispose();
     super.dispose();
   }
 
   void _onTextChanged() {
     final hasText = widget.controller.text.trim().isNotEmpty;
+    final int length = widget.controller.text.length;
+    // Only inserted characters animate; deleting should feel instant.
+    if (length > _lastLength) {
+      _typing.forward(from: 0);
+    }
+    _lastLength = length;
     if (hasText != _hasText) {
       setState(() => _hasText = hasText);
     }
@@ -84,9 +107,11 @@ class _InputBarState extends State<InputBar> {
     final remove = widget.onRemoveAttachment;
     final canAttach = !widget.isBusy && widget.onAttach != null;
     final ready = _hasText && !widget.isBusy;
-    final tokens = estimateTokens(widget.controller.text);
+    final int tokenCount = estimateTokens(widget.controller.text);
 
     final double bottomInset = MediaQuery.viewPaddingOf(context).bottom;
+    final StyleTokens shape = StyleTokens.of(context);
+    final bool ink = shape.instrument;
 
     return Container(
       margin: EdgeInsets.fromLTRB(
@@ -96,9 +121,13 @@ class _InputBarState extends State<InputBar> {
         AppSpace.x2 + (bottomInset > 0 ? bottomInset : 0),
       ),
       decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(AppRadius.card + 2),
-        border: Border.all(color: scheme.outlineVariant),
+        // Ink: a flat sheet with a hairline. Material You: a filled tonal
+        // container with the larger corner radius.
+        color: ink ? scheme.surface : scheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(
+          ink ? AppRadius.card + 2 : shape.panelRadius,
+        ),
+        border: ink ? Border.all(color: scheme.outlineVariant) : null,
       ),
       child: AnimatedSize(
         duration: AppMotion.base,
@@ -130,7 +159,9 @@ class _InputBarState extends State<InputBar> {
             ),
           Stack(
             children: <Widget>[
-              TextField(
+              FadeTransition(
+                opacity: _typingOpacity,
+                child: TextField(
                 controller: widget.controller,
                 focusNode: widget.focusNode,
                 minLines: 1,
@@ -151,6 +182,7 @@ class _InputBarState extends State<InputBar> {
                     AppSpace.x2,
                   ),
                 ),
+              ),
               ),
               // The hint fades out as the first character lands, so typing
               // reads as the text replacing the prompt rather than covering it.
@@ -203,8 +235,8 @@ class _InputBarState extends State<InputBar> {
                 SoftSwap(
                   child: _hasText
                       ? Figure(
-                          '~${formatTokenCount(tokens)} tok',
-                          size: 10.5,
+                          '~${formatTokenCount(tokenCount)} tok',
+                          size: ink ? 10.5 : 11.5,
                           color: scheme.onSurfaceVariant
                               .withValues(alpha: 0.8),
                         )

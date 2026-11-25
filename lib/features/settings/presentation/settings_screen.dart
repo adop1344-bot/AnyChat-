@@ -6,6 +6,7 @@ import '../../../core/errors/debug_log.dart';
 import '../../../core/storage/token_estimator.dart';
 import '../../../core/theme/accent_colors.dart';
 import '../../../core/theme/app_tokens.dart';
+import '../../../core/theme/style_tokens.dart';
 import '../../../core/tools/termux_shell.dart';
 import '../../../core/ui/atoms.dart';
 import '../../../core/ui/motion.dart';
@@ -707,6 +708,7 @@ class _Group extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
+    final StyleTokens tokens = StyleTokens.of(context);
     final List<Widget> rows = <Widget>[];
     for (var i = 0; i < children.length; i++) {
       rows.add(children[i]);
@@ -727,8 +729,10 @@ class _Group extends StatelessWidget {
           margin: const EdgeInsets.symmetric(horizontal: AppSpace.x4),
           decoration: BoxDecoration(
             color: theme.colorScheme.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(AppRadius.card),
-            border: Border.all(color: theme.colorScheme.outlineVariant),
+            borderRadius: tokens.card,
+            border: tokens.hairlineChrome
+                ? Border.all(color: theme.colorScheme.outlineVariant)
+                : null,
           ),
           clipBehavior: Clip.antiAlias,
           child: Column(children: rows),

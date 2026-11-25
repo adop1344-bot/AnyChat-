@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app_providers.dart';
 import '../../core/theme/app_tokens.dart';
+import '../../core/theme/style_tokens.dart';
 import '../../core/ui/atoms.dart';
 import '../../core/ui/motion.dart';
 import '../../l10n/app_localizations.dart';
@@ -477,22 +478,28 @@ class _ChatRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final StyleTokens tokens = StyleTokens.of(context);
+    final double radius = tokens.instrument ? 8 : tokens.controlRadius;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
+      padding: EdgeInsets.only(bottom: tokens.instrument ? 2 : 2),
       child: Material(
-        color: selected ? scheme.surfaceContainerHigh : Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
+        color: selected
+            ? (tokens.instrument
+                ? scheme.surfaceContainerHigh
+                : scheme.secondaryContainer)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(radius),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(radius),
           child: SizedBox(
-            height: 38,
+            height: tokens.rowHeight,
             child: Row(
               children: <Widget>[
                 const SizedBox(width: AppSpace.x2 + 2),
                 SizedBox(
-                  width: 6,
-                  child: selected
+                  width: tokens.instrument ? 6 : 0,
+                  child: selected && tokens.instrument
                       ? Align(
                           alignment: Alignment.centerLeft,
                           child: Container(
@@ -521,8 +528,12 @@ class _ChatRow extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      fontSize: 14,
-                      color: selected ? scheme.onSurface : scheme.onSurfaceVariant,
+                      fontSize: tokens.instrument ? 14 : 15,
+                      color: selected
+                          ? (tokens.instrument
+                              ? scheme.onSurface
+                              : scheme.onSecondaryContainer)
+                          : scheme.onSurfaceVariant,
                     ),
                   ),
                 ),

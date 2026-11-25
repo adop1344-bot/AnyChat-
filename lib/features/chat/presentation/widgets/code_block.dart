@@ -6,6 +6,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:markdown/markdown.dart' as md;
 
 import '../../../../core/theme/app_tokens.dart';
+import '../../../../core/theme/style_tokens.dart';
 
 import '../../../../l10n/app_localizations.dart';
 import 'html_preview_screen.dart';
@@ -202,20 +203,26 @@ class _CodeBlockCardState extends State<CodeBlockCard> {
         : lines;
     final isHtml = widget.language == 'html' || widget.language == 'htm';
 
-    final TextStyle codeStyle = AppType.figure(
-      12.5,
-      height: 1.5,
-      color: scheme.onSurface,
-    );
+    final StyleTokens tokens = StyleTokens.of(context);
+    final TextStyle codeStyle = tokens.monoFigures
+        ? AppType.figure(12.5, height: 1.5, color: scheme.onSurface)
+        : TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 12.5,
+            height: 1.5,
+            color: scheme.onSurface,
+          );
 
     return Container(
       width: double.infinity,
       clipBehavior: Clip.antiAlias,
       margin: const EdgeInsets.symmetric(vertical: AppSpace.x2),
       decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        border: Border.all(color: scheme.outlineVariant),
+        color: tokens.instrument ? scheme.surface : scheme.surfaceContainerHigh,
+        borderRadius: tokens.card,
+        border: tokens.hairlineChrome
+            ? Border.all(color: scheme.outlineVariant)
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

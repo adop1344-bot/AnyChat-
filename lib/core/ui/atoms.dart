@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_tokens.dart';
+import '../theme/style_tokens.dart';
 
 /// A 1px rule. Dividers carry grouping in this app, so they are used where a
 /// card border would otherwise be invented.
@@ -18,7 +19,12 @@ class Hairline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color resolved = color ?? Theme.of(context).colorScheme.outlineVariant;
+    final StyleTokens tokens = StyleTokens.of(context);
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final Color resolved = color ??
+        (tokens.hairlineChrome
+            ? scheme.outlineVariant
+            : scheme.outlineVariant.withValues(alpha: 0.6));
     return Container(
       height: 1,
       margin: EdgeInsets.only(left: indent, right: endIndent),
@@ -79,9 +85,23 @@ class Figure extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color resolved = color ?? Theme.of(context).colorScheme.onSurfaceVariant;
+    final StyleTokens tokens = StyleTokens.of(context);
+    if (tokens.monoFigures) {
+      return Text(
+        text,
+        style: AppType.figure(size, weight: weight, color: resolved),
+      );
+    }
     return Text(
       text,
-      style: AppType.figure(size, weight: weight, color: resolved),
+      style: TextStyle(
+        fontSize: size + 0.5,
+        fontWeight: weight,
+        height: 1.4,
+        letterSpacing: 0,
+        color: resolved,
+        fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
+      ),
     );
   }
 }
@@ -106,12 +126,14 @@ class Meter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
+    final StyleTokens tokens = StyleTokens.of(context);
     final double value = ratio.isNaN ? 0 : ratio.clamp(0.0, 1.0);
+    final double thickness = tokens.instrument ? height : (height + 2);
     return SizedBox(
       width: width,
-      height: height,
+      height: thickness,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(height / 2),
+        borderRadius: BorderRadius.circular(thickness / 2),
         child: TweenAnimationBuilder<double>(
           tween: Tween<double>(begin: 0, end: value),
           duration: AppMotion.slow,
@@ -131,7 +153,11 @@ class Meter extends StatelessWidget {
                   Expanded(
                     flex: empty,
                     child: ColoredBox(
-                      color: track ?? scheme.surfaceContainerHighest,
+                      color: track ??
+                          (tokens.instrument
+                              ? scheme.surfaceContainerHighest
+                              : scheme.surfaceContainerHighest
+                                  .withValues(alpha: 0.9)),
                     ),
                   ),
               ],
@@ -209,9 +235,12 @@ class QuietIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
+    final StyleTokens tokens = StyleTokens.of(context);
     final Widget button = InkWell(
       onTap: onPressed,
-      borderRadius: BorderRadius.circular(AppRadius.control - 2),
+      borderRadius: BorderRadius.circular(
+        tokens.instrument ? AppRadius.control - 2 : box / 2,
+      ),
       child: SizedBox(
         width: box,
         height: box,

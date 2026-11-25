@@ -7,6 +7,7 @@ import '../../../../core/errors/api_error.dart';
 import '../../../../core/errors/error_localizer.dart';
 import '../../../../core/storage/token_estimator.dart';
 import '../../../../core/theme/app_tokens.dart';
+import '../../../../core/theme/style_tokens.dart';
 import '../../../../core/ui/atoms.dart';
 import '../../../../core/ui/motion.dart';
 import '../../domain/models.dart';
@@ -125,21 +126,33 @@ class MessageBubble extends StatelessWidget {
         ),
     ];
 
+    final StyleTokens tokens = StyleTokens.of(context);
     final Widget body;
     if (isUser) {
+      // Ink: a raised neutral block. Material You: the primary container with
+      // the asymmetric tail corner, which is what people read as a bubble.
       body = Container(
         constraints: BoxConstraints(
           maxWidth: MediaQuery.sizeOf(context).width * 0.82,
         ),
-        padding: const EdgeInsets.fromLTRB(
-          AppSpace.x3 + 2,
+        padding: EdgeInsets.fromLTRB(
+          tokens.instrument ? AppSpace.x3 + 2 : AppSpace.x4,
           AppSpace.x2 + 2,
-          AppSpace.x3 + 2,
+          tokens.instrument ? AppSpace.x3 + 2 : AppSpace.x4,
           AppSpace.x2 + 2,
         ),
         decoration: BoxDecoration(
-          color: scheme.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(AppRadius.card),
+          color: tokens.instrument
+              ? scheme.surfaceContainerHigh
+              : scheme.primaryContainer,
+          borderRadius: tokens.instrument
+              ? tokens.card
+              : BorderRadius.only(
+                  topLeft: Radius.circular(tokens.panelRadius),
+                  topRight: Radius.circular(tokens.panelRadius),
+                  bottomLeft: Radius.circular(tokens.panelRadius),
+                  bottomRight: Radius.circular(6),
+                ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.end,
@@ -148,15 +161,35 @@ class MessageBubble extends StatelessWidget {
         ),
       );
     } else {
+      final Widget column = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: content,
+      );
       body = ConstrainedBox(
         constraints: BoxConstraints(
           maxWidth: MediaQuery.sizeOf(context).width * 0.9,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: content,
-        ),
+        child: tokens.instrument
+            ? column
+            : Container(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpace.x4,
+                  AppSpace.x3,
+                  AppSpace.x4,
+                  AppSpace.x3,
+                ),
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(tokens.panelRadius),
+                    topRight: Radius.circular(tokens.panelRadius),
+                    bottomRight: Radius.circular(tokens.panelRadius),
+                    bottomLeft: Radius.circular(6),
+                  ),
+                ),
+                child: column,
+              ),
       );
     }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'app_tokens.dart';
+import 'style_tokens.dart';
 
 /// Builds the single theme used across AnyChat+.
 ///
@@ -42,6 +43,7 @@ class AppTheme {
       useMaterial3: true,
       brightness: brightness,
       colorScheme: scheme,
+      extensions: const <ThemeExtension<dynamic>>[StyleTokens.you],
       splashFactory: InkSparkle.splashFactory,
       scaffoldBackgroundColor:
           isDark ? scheme.surfaceContainerLowest : scheme.surface,
@@ -228,6 +230,7 @@ class AppTheme {
       useMaterial3: true,
       brightness: brightness,
       colorScheme: scheme,
+      extensions: const <ThemeExtension<dynamic>>[StyleTokens.ink],
       fontFamily: AppType.sans,
       textTheme: text,
       primaryTextTheme: text,
