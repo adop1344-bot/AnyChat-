@@ -1,0 +1,7 @@
+Analyzing AnyChat-...                                           
+
+warning • Unused import: '../theme/app_tokens.dart'. Try removing the import directive • lib/core/ui/glass.dart:5:8 • unused_import
+   info • Statements in an if should be enclosed in a block. Try wrapping the statement in a block • lib/features/chat/presentation/widgets/message_bubble.dart:152:7 • curly_braces_in_flow_control_structures
+warning • Unused import: '../../core/ui/glass.dart'. Try removing the import directive • lib/features/home/chat_drawer.dart:12:8 • unused_import
+
+3 issues found. (ran in 10.9s)
