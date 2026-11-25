@@ -2,7 +2,6 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
-import '../theme/app_tokens.dart';
 import '../theme/style_tokens.dart';
 
 /// The colour field Liquid Glass floats over. Three soft blobs and a vertical

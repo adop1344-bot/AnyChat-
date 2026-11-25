@@ -148,8 +148,8 @@ class MessageBubble extends StatelessWidget {
             children: content,
           ),
         );
-      } else
-      body = Container(
+      } else {
+        body = Container(
         constraints: BoxConstraints(
           maxWidth: MediaQuery.sizeOf(context).width * 0.82,
         ),
@@ -177,7 +177,8 @@ class MessageBubble extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: content,
         ),
-      );
+        );
+      }
     } else {
       final Widget column = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
