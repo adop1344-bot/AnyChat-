@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme/accent_colors.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/app_tokens.dart';
+import 'core/ui/glass.dart';
 import 'features/home/main_shell.dart';
 import 'features/settings/app_settings.dart';
 import 'features/settings/state/settings_controller.dart';
@@ -50,6 +51,12 @@ class AnyChatApp extends ConsumerWidget {
       darkTheme: AppTheme.dark(darkAccent, style),
       themeAnimationDuration: const Duration(milliseconds: 420),
       themeAnimationCurve: AppMotion.curve,
+      // Glass needs something behind it to blur, so the colour field is mounted
+      // above every route.
+      builder: (BuildContext context, Widget? child) => GlassBackdrop(
+        enabled: style == AppUiStyle.glass,
+        child: child ?? const SizedBox.shrink(),
+      ),
       themeMode: _themeMode(settings.themeMode),
       locale: localeCode == null ? null : Locale(localeCode),
       supportedLocales: AppLocalizations.supportedLocales,

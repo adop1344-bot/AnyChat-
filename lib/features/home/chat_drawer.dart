@@ -9,6 +9,7 @@ import '../../app_providers.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../core/theme/style_tokens.dart';
 import '../../core/ui/atoms.dart';
+import '../../core/ui/glass.dart';
 import '../../core/ui/motion.dart';
 import '../../l10n/app_localizations.dart';
 import '../settings/presentation/settings_screen.dart';
@@ -484,9 +485,13 @@ class _ChatRow extends StatelessWidget {
       padding: EdgeInsets.only(bottom: tokens.instrument ? 2 : 2),
       child: Material(
         color: selected
-            ? (tokens.instrument
-                ? scheme.surfaceContainerHigh
-                : scheme.secondaryContainer)
+            ? (tokens.glass
+                ? Colors.white.withValues(
+                    alpha: theme.brightness == Brightness.dark ? 0.18 : 0.62,
+                  )
+                : tokens.instrument
+                    ? scheme.surfaceContainerHigh
+                    : scheme.secondaryContainer)
             : Colors.transparent,
         borderRadius: BorderRadius.circular(radius),
         child: InkWell(

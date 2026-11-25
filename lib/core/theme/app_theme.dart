@@ -25,7 +25,210 @@ class AppTheme {
       switch (style) {
         AppUiStyle.instrument => _build(brightness, accent),
         AppUiStyle.material => _material(brightness, accent),
+        AppUiStyle.glass => _glass(brightness, accent),
       };
+
+  /// Liquid Glass: every surface is a translucent pane, so the scaffold itself
+  /// is transparent and the colour field shows through the blur.
+  static ThemeData _glass(Brightness brightness, Color accent) {
+    final ColorScheme scheme = ColorScheme.fromSeed(
+      seedColor: accent,
+      brightness: brightness,
+    );
+    final bool isDark = brightness == Brightness.dark;
+    final BorderRadius control = BorderRadius.circular(22);
+    final BorderRadius card = BorderRadius.circular(24);
+    final BorderRadius panel = BorderRadius.circular(32);
+
+    return ThemeData(
+      useMaterial3: true,
+      brightness: brightness,
+      colorScheme: scheme.copyWith(
+        surface: Colors.transparent,
+        surfaceTint: Colors.transparent,
+        surfaceContainerLowest: Colors.transparent,
+        surfaceContainerLow: Colors.transparent,
+        surfaceContainer: Colors.transparent,
+        surfaceContainerHigh: Colors.transparent,
+        surfaceContainerHighest: Colors.transparent,
+      ),
+      extensions: const <ThemeExtension<dynamic>>[StyleTokens.liquid],
+      scaffoldBackgroundColor: Colors.transparent,
+      canvasColor: Colors.transparent,
+      splashFactory: InkRipple.splashFactory,
+      splashColor: Colors.white.withValues(alpha: 0.10),
+      highlightColor: Colors.white.withValues(alpha: 0.06),
+      appBarTheme: AppBarTheme(
+        backgroundColor: Colors.transparent,
+        foregroundColor: scheme.onSurface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: false,
+        titleTextStyle: TextStyle(
+          fontSize: 21,
+          fontWeight: FontWeight.w600,
+          color: scheme.onSurface,
+          letterSpacing: -0.2,
+        ),
+      ),
+      cardTheme: CardThemeData(
+        elevation: 0,
+        color: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        margin: EdgeInsets.zero,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(borderRadius: card),
+      ),
+      dividerTheme: DividerThemeData(
+        color: Colors.white.withValues(alpha: isDark ? 0.12 : 0.45),
+        thickness: 1,
+        space: 1,
+      ),
+      listTileTheme: ListTileThemeData(
+        iconColor: scheme.onSurfaceVariant,
+        shape: RoundedRectangleBorder(borderRadius: control),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: isDark
+            ? Colors.white.withValues(alpha: 0.10)
+            : Colors.white.withValues(alpha: 0.72),
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: panel),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: isDark
+            ? const Color(0xFF14171D).withValues(alpha: 0.86)
+            : Colors.white.withValues(alpha: 0.86),
+        surfaceTintColor: Colors.transparent,
+        modalBackgroundColor: isDark
+            ? const Color(0xFF14171D).withValues(alpha: 0.86)
+            : Colors.white.withValues(alpha: 0.86),
+        elevation: 0,
+        showDragHandle: true,
+        dragHandleColor: scheme.onSurfaceVariant.withValues(alpha: 0.4),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: isDark
+            ? Colors.white.withValues(alpha: 0.16)
+            : const Color(0xFF1B1D21).withValues(alpha: 0.92),
+        contentTextStyle: TextStyle(
+          color: isDark ? scheme.onSurface : Colors.white,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: false,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 18,
+          vertical: 14,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: control,
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: control,
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: control,
+          borderSide: BorderSide(
+            color: Colors.white.withValues(alpha: isDark ? 0.5 : 0.9),
+            width: 1.4,
+          ),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: scheme.primary,
+          foregroundColor: scheme.onPrimary,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          minimumSize: const Size(0, 46),
+          shape: RoundedRectangleBorder(borderRadius: control),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          minimumSize: const Size(0, 40),
+          shape: RoundedRectangleBorder(borderRadius: control),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: scheme.onSurface,
+          minimumSize: const Size(0, 46),
+          side: BorderSide(
+            color: Colors.white.withValues(alpha: isDark ? 0.28 : 0.75),
+          ),
+          shape: RoundedRectangleBorder(borderRadius: control),
+        ),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          foregroundColor: scheme.onSurfaceVariant,
+          shape: RoundedRectangleBorder(borderRadius: control),
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: Colors.white.withValues(alpha: isDark ? 0.10 : 0.45),
+        selectedColor: scheme.primary.withValues(alpha: 0.22),
+        side: BorderSide(
+          color: Colors.white.withValues(alpha: isDark ? 0.22 : 0.6),
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: isDark
+            ? const Color(0xFF1A1D24).withValues(alpha: 0.94)
+            : Colors.white.withValues(alpha: 0.94),
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: card),
+      ),
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: scheme.primary,
+        linearTrackColor: Colors.white.withValues(alpha: 0.16),
+        circularTrackColor: Colors.white.withValues(alpha: 0.16),
+        linearMinHeight: 2,
+      ),
+      drawerTheme: DrawerThemeData(
+        backgroundColor: isDark
+            ? const Color(0xFF0F1218).withValues(alpha: 0.82)
+            : Colors.white.withValues(alpha: 0.82),
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        width: 300,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.only(
+            topRight: Radius.circular(32),
+            bottomRight: Radius.circular(32),
+          ),
+        ),
+      ),
+      tooltipTheme: TooltipThemeData(
+        decoration: BoxDecoration(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.18)
+              : const Color(0xFF1B1D21).withValues(alpha: 0.92),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        textStyle: TextStyle(
+          color: isDark ? scheme.onSurface : Colors.white,
+        ),
+      ),
+    );
+  }
 
   /// Material You: seeded surfaces, tonal fills, pill controls, the stock type
   /// scale. Nothing from the instrument ramp leaks in here.

@@ -7,6 +7,7 @@ import 'package:markdown/markdown.dart' as md;
 
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/theme/style_tokens.dart';
+import '../../../../core/ui/glass.dart';
 
 import '../../../../l10n/app_localizations.dart';
 import 'html_preview_screen.dart';
@@ -213,17 +214,11 @@ class _CodeBlockCardState extends State<CodeBlockCard> {
             color: scheme.onSurface,
           );
 
-    return Container(
-      width: double.infinity,
-      clipBehavior: Clip.antiAlias,
+    return GlassSurface(
+      radius: tokens.cardRadius,
+      blur: 16,
       margin: const EdgeInsets.symmetric(vertical: AppSpace.x2),
-      decoration: BoxDecoration(
-        color: tokens.instrument ? scheme.surface : scheme.surfaceContainerHigh,
-        borderRadius: tokens.card,
-        border: tokens.hairlineChrome
-            ? Border.all(color: scheme.outlineVariant)
-            : null,
-      ),
+      tint: tokens.instrument ? scheme.surface : scheme.surfaceContainerHigh,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,

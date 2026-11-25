@@ -9,6 +9,7 @@ import '../../../core/theme/app_tokens.dart';
 import '../../../core/theme/style_tokens.dart';
 import '../../../core/tools/termux_shell.dart';
 import '../../../core/ui/atoms.dart';
+import '../../../core/ui/glass.dart';
 import '../../../core/ui/motion.dart';
 import '../../../core/ui/style_switch.dart';
 import '../../../l10n/app_localizations.dart';
@@ -377,6 +378,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           _controller.setUiStyle(style.name),
                       labelInstrument: 'Instrument',
                       labelMaterial: 'Material You',
+                      labelGlass: 'Liquid Glass',
                     ),
                   ],
                 ),
@@ -581,12 +583,11 @@ class _ConnectionCard extends StatelessWidget {
         AppSpace.x4,
         0,
       ),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
-      child: Column(
+      child: GlassSurface(
+        radius: AppRadius.card,
+        blur: 20,
+        tint: scheme.surfaceContainerLow,
+        child: Column(
         children: <Widget>[
           InkWell(
             onTap: onProviders,
@@ -693,11 +694,11 @@ class _ConnectionCard extends StatelessWidget {
             ),
           ),
         ],
+        ),
       ),
     );
   }
 }
-
 /// A titled group: quiet label, one surface, rows split by hairlines.
 class _Group extends StatelessWidget {
   const _Group({required this.label, required this.children});
@@ -725,16 +726,11 @@ class _Group extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         SectionLabel(label),
-        Container(
+        GlassSurface(
+          radius: tokens.cardRadius,
+          blur: 20,
           margin: const EdgeInsets.symmetric(horizontal: AppSpace.x4),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerLow,
-            borderRadius: tokens.card,
-            border: tokens.hairlineChrome
-                ? Border.all(color: theme.colorScheme.outlineVariant)
-                : null,
-          ),
-          clipBehavior: Clip.antiAlias,
+          tint: theme.colorScheme.surfaceContainerLow,
           child: Column(children: rows),
         ),
       ],

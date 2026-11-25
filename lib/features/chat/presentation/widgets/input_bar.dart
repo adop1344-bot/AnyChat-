@@ -4,6 +4,7 @@ import '../../../../core/storage/token_estimator.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/theme/style_tokens.dart';
 import '../../../../core/ui/atoms.dart';
+import '../../../../core/ui/glass.dart';
 import '../../../../core/ui/motion.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../providers/domain/model_info.dart';
@@ -113,22 +114,17 @@ class _InputBarState extends State<InputBar>
     final StyleTokens shape = StyleTokens.of(context);
     final bool ink = shape.instrument;
 
-    return Container(
+    return GlassSurface(
+      radius: ink ? AppRadius.card + 2 : shape.panelRadius,
       margin: EdgeInsets.fromLTRB(
         AppSpace.x3,
         AppSpace.x2,
         AppSpace.x3,
         AppSpace.x2 + (bottomInset > 0 ? bottomInset : 0),
       ),
-      decoration: BoxDecoration(
-        // Ink: a flat sheet with a hairline. Material You: a filled tonal
-        // container with the larger corner radius.
-        color: ink ? scheme.surface : scheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(
-          ink ? AppRadius.card + 2 : shape.panelRadius,
-        ),
-        border: ink ? Border.all(color: scheme.outlineVariant) : null,
-      ),
+      tint: ink
+          ? scheme.surface
+          : (shape.glass ? null : scheme.surfaceContainerHigh),
       child: AnimatedSize(
         duration: AppMotion.base,
         curve: AppMotion.curve,

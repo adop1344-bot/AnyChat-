@@ -6,6 +6,7 @@ import '../../../core/storage/token_estimator.dart';
 import '../../../core/theme/app_tokens.dart';
 import '../../../core/theme/style_tokens.dart';
 import '../../../core/ui/atoms.dart';
+import '../../../core/ui/glass.dart';
 import '../../../core/ui/motion.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../home/chat_drawer.dart';
@@ -557,6 +558,44 @@ class _ChatTopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final StyleTokens tokens = StyleTokens.of(context);
+    if (tokens.glass) {
+      return GlassSurface(
+        radius: 0,
+        blur: 24,
+        border: false,
+        child: SizedBox(
+          height: 56,
+          child: Row(
+            children: <Widget>[
+              const SizedBox(width: AppSpace.x2),
+              IconButton(
+                tooltip: AppLocalizations.of(context).menu,
+                onPressed: onMenu,
+                icon: const MenuGlyph(size: 18),
+              ),
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              QuietIconButton(
+                icon: Icons.add_comment_outlined,
+                tooltip: AppLocalizations.of(context).newChat,
+                onPressed: onNewChat,
+                box: 38,
+              ),
+              const SizedBox(width: AppSpace.x2),
+            ],
+          ),
+        ),
+      );
+    }
+
     if (!tokens.instrument) {
       // Material You keeps the stock app bar: larger title, tonal tint on
       // scroll, round icon buttons.
@@ -728,6 +767,26 @@ class _ContextStrip extends ConsumerWidget {
         modelPart,
       ],
     );
+
+    if (tokens.glass) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpace.x3,
+          AppSpace.x2,
+          AppSpace.x3,
+          AppSpace.x1,
+        ),
+        child: GlassSurface(
+          radius: 18,
+          blur: 18,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpace.x2,
+            vertical: 2,
+          ),
+          child: SizedBox(height: 36, child: row),
+        ),
+      );
+    }
 
     if (!tokens.instrument) {
       // Material You: a tonal chip row, not a ruled instrument line.

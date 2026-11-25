@@ -56,9 +56,10 @@ class AppRamp {
   );
 }
 
-/// Two shipped looks. `instrument` is the ink-and-hairlines treatment with
-/// monospaced figures; `material` is Material You with seeded surfaces.
-enum AppUiStyle { instrument, material }
+/// The three shipped looks. `instrument` is the ink-and-hairlines treatment
+/// with monospaced figures, `material` is Material You with seeded surfaces,
+/// `glass` is Liquid Glass: translucent blurred panels over a colour field.
+enum AppUiStyle { instrument, material, glass }
 
 AppUiStyle appUiStyleFromName(String? name) {
   for (final AppUiStyle style in AppUiStyle.values) {

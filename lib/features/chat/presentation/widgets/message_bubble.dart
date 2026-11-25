@@ -9,6 +9,7 @@ import '../../../../core/storage/token_estimator.dart';
 import '../../../../core/theme/app_tokens.dart';
 import '../../../../core/theme/style_tokens.dart';
 import '../../../../core/ui/atoms.dart';
+import '../../../../core/ui/glass.dart';
 import '../../../../core/ui/motion.dart';
 import '../../domain/models.dart';
 import '../../../../l10n/app_localizations.dart';
@@ -131,6 +132,23 @@ class MessageBubble extends StatelessWidget {
     if (isUser) {
       // Ink: a raised neutral block. Material You: the primary container with
       // the asymmetric tail corner, which is what people read as a bubble.
+      if (tokens.glass) {
+        body = GlassSurface(
+          radius: tokens.panelRadius,
+          blur: 16,
+          padding: const EdgeInsets.fromLTRB(
+            AppSpace.x4,
+            AppSpace.x3,
+            AppSpace.x4,
+            AppSpace.x3,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
+            children: content,
+          ),
+        );
+      } else
       body = Container(
         constraints: BoxConstraints(
           maxWidth: MediaQuery.sizeOf(context).width * 0.82,
@@ -170,7 +188,19 @@ class MessageBubble extends StatelessWidget {
         constraints: BoxConstraints(
           maxWidth: MediaQuery.sizeOf(context).width * 0.9,
         ),
-        child: tokens.instrument
+        child: tokens.glass
+            ? GlassSurface(
+                radius: tokens.panelRadius,
+                blur: 14,
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpace.x4,
+                  AppSpace.x3,
+                  AppSpace.x4,
+                  AppSpace.x3,
+                ),
+                child: column,
+              )
+            : tokens.instrument
             ? column
             : Container(
                 padding: const EdgeInsets.fromLTRB(

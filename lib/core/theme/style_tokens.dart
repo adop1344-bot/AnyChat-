@@ -19,6 +19,7 @@ class StyleTokens extends ThemeExtension<StyleTokens> {
     required this.rowHeight,
     required this.hairlineChrome,
     required this.tonalChrome,
+    this.glass = false,
   });
 
   final bool instrument;
@@ -37,6 +38,9 @@ class StyleTokens extends ThemeExtension<StyleTokens> {
 
   /// Chrome separates with tonal containers instead of rules.
   final bool tonalChrome;
+
+  /// Panels are translucent and blur what sits behind them.
+  final bool glass;
 
   static const StyleTokens ink = StyleTokens(
     instrument: true,
@@ -60,8 +64,23 @@ class StyleTokens extends ThemeExtension<StyleTokens> {
     tonalChrome: true,
   );
 
-  static StyleTokens forStyle(AppUiStyle style) =>
-      style == AppUiStyle.instrument ? ink : you;
+  static const StyleTokens liquid = StyleTokens(
+    instrument: false,
+    controlRadius: 22,
+    cardRadius: 24,
+    panelRadius: 32,
+    monoFigures: false,
+    rowHeight: 46,
+    hairlineChrome: false,
+    tonalChrome: false,
+    glass: true,
+  );
+
+  static StyleTokens forStyle(AppUiStyle style) => switch (style) {
+        AppUiStyle.instrument => ink,
+        AppUiStyle.material => you,
+        AppUiStyle.glass => liquid,
+      };
 
   static StyleTokens of(BuildContext context) =>
       Theme.of(context).extension<StyleTokens>() ?? ink;
@@ -80,6 +99,7 @@ class StyleTokens extends ThemeExtension<StyleTokens> {
     double? rowHeight,
     bool? hairlineChrome,
     bool? tonalChrome,
+    bool? glass,
   }) =>
       StyleTokens(
         instrument: instrument ?? this.instrument,
@@ -90,6 +110,7 @@ class StyleTokens extends ThemeExtension<StyleTokens> {
         rowHeight: rowHeight ?? this.rowHeight,
         hairlineChrome: hairlineChrome ?? this.hairlineChrome,
         tonalChrome: tonalChrome ?? this.tonalChrome,
+        glass: glass ?? this.glass,
       );
 
   @override
@@ -105,6 +126,7 @@ class StyleTokens extends ThemeExtension<StyleTokens> {
       rowHeight: _lerp(rowHeight, other.rowHeight, t),
       hairlineChrome: t < 0.5 ? hairlineChrome : other.hairlineChrome,
       tonalChrome: t < 0.5 ? tonalChrome : other.tonalChrome,
+      glass: t < 0.5 ? glass : other.glass,
     );
   }
 

@@ -11,12 +11,14 @@ class StylePicker extends StatelessWidget {
     required this.onChanged,
     required this.labelInstrument,
     required this.labelMaterial,
+    required this.labelGlass,
   });
 
   final AppUiStyle value;
   final ValueChanged<AppUiStyle> onChanged;
   final String labelInstrument;
   final String labelMaterial;
+  final String labelGlass;
 
   @override
   Widget build(BuildContext context) {
@@ -30,13 +32,22 @@ class StylePicker extends StatelessWidget {
             preview: const _InstrumentPreview(),
           ),
         ),
-        const SizedBox(width: AppSpace.x3),
+        const SizedBox(width: AppSpace.x2),
         Expanded(
           child: _StyleCard(
             label: labelMaterial,
             selected: value == AppUiStyle.material,
             onTap: () => onChanged(AppUiStyle.material),
             preview: const _MaterialPreview(),
+          ),
+        ),
+        const SizedBox(width: AppSpace.x2),
+        Expanded(
+          child: _StyleCard(
+            label: labelGlass,
+            selected: value == AppUiStyle.glass,
+            onTap: () => onChanged(AppUiStyle.glass),
+            preview: const _GlassPreview(),
           ),
         ),
       ],
@@ -149,6 +160,80 @@ class _InstrumentPreview extends StatelessWidget {
             const Spacer(),
             Container(height: 1, color: AppRamp.dark.border),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A frosted pane over a colour field, bright top edge and a specular line.
+class _GlassPreview extends StatelessWidget {
+  const _GlassPreview();
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: <Color>[
+            scheme.primary.withValues(alpha: isDark ? 0.6 : 0.45),
+            scheme.tertiary.withValues(alpha: isDark ? 0.55 : 0.4),
+          ],
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(7),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: <Color>[
+                Colors.white.withValues(alpha: isDark ? 0.32 : 0.62),
+                Colors.white.withValues(alpha: isDark ? 0.10 : 0.24),
+              ],
+            ),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: isDark ? 0.45 : 0.85),
+            ),
+          ),
+          child: Column(
+            children: <Widget>[
+              const SizedBox(height: 5),
+              Container(
+                height: 1,
+                margin: const EdgeInsets.symmetric(horizontal: 9),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: <Color>[
+                      Colors.white.withValues(alpha: 0),
+                      Colors.white.withValues(alpha: 0.95),
+                      Colors.white.withValues(alpha: 0),
+                    ],
+                  ),
+                ),
+              ),
+              const Spacer(),
+              Padding(
+                padding: const EdgeInsets.all(6),
+                child: Container(
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.32),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.65),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
